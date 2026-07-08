@@ -186,6 +186,25 @@
   .priority-pill{ font-family:'Nunito Sans'; font-size:9.5px; font-weight:700; padding:3px 8px; border-radius:9px; text-transform:uppercase; letter-spacing:.03em; }
   .priority-pill.haute{ background:rgba(201,79,58,.18); color:var(--element-accent); box-shadow: inset 0 1px 0 rgba(255,255,255,.15); }
   .priority-pill.normale{ background:rgba(128,128,128,.18); opacity:.7; box-shadow: inset 0 1px 0 rgba(255,255,255,.1); }
+  .priority-pill.basse{ background:rgba(128,128,128,.10); opacity:.5; box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+  .task-echeance{ font-size:10px; opacity:.55; font-family:'Space Mono', monospace; margin-right:2px; }
+  .task-echeance.retard{ color:var(--element-accent); opacity:1; font-weight:700; }
+  .task-row .checkbox{ cursor:pointer; }
+  .task-supprimer{ opacity:.35; cursor:pointer; font-size:14px; padding:2px 4px; }
+
+  .ajout-tache-row{ display:flex; gap:8px; margin-bottom:8px; }
+  .ajout-tache-row .field-input{ flex:1; }
+  .field-input{
+    padding:10px 11px; border-radius:11px; border:1.5px solid var(--glass-border-night);
+    background:rgba(128,128,128,.10); color:inherit; font-family:'Nunito Sans'; font-size:13px;
+  }
+  .phone.day .field-input{ border-color: var(--glass-border-day); background:rgba(0,0,0,.03); }
+  .btn-mini{
+    width:38px; border:none; border-radius:11px; cursor:pointer; font-size:18px; font-weight:700; color:#2B2A4A;
+    background: radial-gradient(circle at 32% 20%, #fff, var(--gold-bright) 45%, var(--gold) 100%);
+  }
+  .ajout-tache-options{ display:flex; gap:8px; }
+  .field-input-mini{ flex:1; font-size:11.5px; padding:8px 9px; }
 
   /* ---- Weather chip ---- */
   .weather-card{ display:flex; align-items:center; gap:14px; }
@@ -278,22 +297,24 @@
       <div class="agenda-row libre"><span class="agenda-label libre-label">Chargement de l'agenda…</span></div>
     </div>
 
-    <div class="section-label">Tâches <span style="opacity:.5; font-weight:400; text-transform:none;">(pas encore branchées)</span></div>
-    <div class="task-list">
-      <div class="task-row">
-        <div class="checkbox"></div>
-        <div class="task-label">Envoyer le lien du sondage à Marine</div>
-        <span class="priority-pill haute">Haute</span>
+    <div class="section-label">Tâches</div>
+    <div class="card" style="margin-bottom:14px;">
+      <div class="ajout-tache-row">
+        <input type="text" class="field-input" id="nouvelle-tache-titre" placeholder="Ajouter une tâche…">
+        <button class="btn-mini" onclick="creerTache()">+</button>
       </div>
-      <div class="task-row">
-        <div class="checkbox done"></div>
-        <div class="task-label done">Session prep repas dimanche</div>
+      <div class="ajout-tache-options">
+        <select class="field-input field-input-mini" id="nouvelle-tache-priorite">
+          <option value="normale">Normale</option>
+          <option value="haute">Haute</option>
+          <option value="basse">Basse</option>
+        </select>
+        <input type="date" class="field-input field-input-mini" id="nouvelle-tache-echeance">
       </div>
-      <div class="task-row">
-        <div class="checkbox"></div>
-        <div class="task-label">Racheter du tofu fumé</div>
-        <span class="priority-pill normale">Normale</span>
-      </div>
+      <div class="status-line" id="status-tache"></div>
+    </div>
+    <div class="task-list" id="task-list">
+      <div class="status-line">Chargement…</div>
     </div>
 
     <div class="section-label">Corrélation personnelle <span style="opacity:.5; font-weight:400; text-transform:none;">(basée sur tes vrais check-ins)</span></div>
@@ -442,8 +463,122 @@
     }
   }
 
+  const FN_TACHES_URL = `${SUPABASE_URL}/functions/v1/taches`;
+  const AUTH_HEADERS_TACHES = { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' };
+  const todayISO = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
+
+  function renderTaches(data){
+    const list = document.getElementById('task-list');
+    list.innerHTML = '';
+
+    const aFaire = data.taches_a_faire || [];
+    if (aFaire.length === 0){
+      list.innerHTML = '<div class="status-line">Rien à faire pour l\'instant — ajoute une tâche ci-dessus.</div>';
+    }
+
+    for (const t of aFaire){
+      const row = document.createElement('div');
+      row.className = 'task-row';
+      const enRetard = t.echeance && t.echeance < todayISO;
+      row.innerHTML = `
+        <div class="checkbox" onclick="terminerTache('${t.id}')"></div>
+        <div class="task-label">${t.titre}</div>
+        ${t.echeance ? `<span class="task-echeance${enRetard ? ' retard' : ''}">${t.echeance}</span>` : ''}
+        ${t.priorite !== 'normale' ? `<span class="priority-pill ${t.priorite}">${t.priorite === 'haute' ? 'Haute' : 'Basse'}</span>` : ''}
+        <span class="task-supprimer" onclick="supprimerTache('${t.id}')">✕</span>
+      `;
+      list.appendChild(row);
+    }
+
+    const termineesRecentes = data.taches_terminees_recentes || [];
+    for (const t of termineesRecentes.slice(0, 3)){
+      const row = document.createElement('div');
+      row.className = 'task-row';
+      row.innerHTML = `
+        <div class="checkbox done" onclick="rouvrirTache('${t.id}')"></div>
+        <div class="task-label done">${t.titre}</div>
+      `;
+      list.appendChild(row);
+    }
+  }
+
+  async function chargerTaches(){
+    try {
+      const res = await fetch(FN_TACHES_URL, { headers: AUTH_HEADERS_TACHES });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderTaches(data);
+    } catch (err){
+      console.error('Erreur de chargement des tâches :', err);
+      document.getElementById('task-list').innerHTML = '<div class="status-line error">Tâches indisponibles pour le moment</div>';
+    }
+  }
+
+  async function creerTache(){
+    const status = document.getElementById('status-tache');
+    const titre = document.getElementById('nouvelle-tache-titre').value.trim();
+    if (!titre){
+      status.className = 'status-line error';
+      status.textContent = 'Écris une tâche avant d\'ajouter';
+      return;
+    }
+    status.className = 'status-line';
+    status.textContent = 'Ajout…';
+    try {
+      const echeance = document.getElementById('nouvelle-tache-echeance').value;
+      const res = await fetch(FN_TACHES_URL, {
+        method: 'POST', headers: AUTH_HEADERS_TACHES,
+        body: JSON.stringify({
+          type: 'creer',
+          titre,
+          priorite: document.getElementById('nouvelle-tache-priorite').value,
+          echeance: echeance || undefined,
+        })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderTaches(data);
+      status.className = '';
+      status.textContent = '';
+      document.getElementById('nouvelle-tache-titre').value = '';
+      document.getElementById('nouvelle-tache-echeance').value = '';
+    } catch (err){
+      status.className = 'status-line error';
+      status.textContent = 'Échec de l\'ajout';
+      console.error(err);
+    }
+  }
+
+  async function terminerTache(id){
+    try {
+      const res = await fetch(FN_TACHES_URL, { method: 'POST', headers: AUTH_HEADERS_TACHES, body: JSON.stringify({ type: 'terminer', id }) });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderTaches(data);
+    } catch (err){ console.error(err); }
+  }
+
+  async function rouvrirTache(id){
+    try {
+      const res = await fetch(FN_TACHES_URL, { method: 'POST', headers: AUTH_HEADERS_TACHES, body: JSON.stringify({ type: 'rouvrir', id }) });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderTaches(data);
+    } catch (err){ console.error(err); }
+  }
+
+  async function supprimerTache(id){
+    try {
+      const res = await fetch(FN_TACHES_URL, { method: 'POST', headers: AUTH_HEADERS_TACHES, body: JSON.stringify({ type: 'supprimer', id }) });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderTaches(data);
+    } catch (err){ console.error(err); }
+  }
+
   chargerVueDuJour();
   chargerCorrelation();
+  chargerTaches();
 </script>
 
 </body>
