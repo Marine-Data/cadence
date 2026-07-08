@@ -158,7 +158,9 @@
     box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 3px 10px rgba(20,30,60,.08);
   }
   .agenda-row.libre{ background:transparent; border:1.5px dashed rgba(128,128,128,.3); box-shadow:none; }
+  .agenda-row.toute-journee{ border-left:3px solid var(--element-accent); }
   .agenda-time{ font-family:'Space Mono', monospace; font-size:12px; font-weight:700; opacity:.85; width:80px; flex-shrink:0; }
+  .agenda-time.toute-journee-badge{ font-family:'Nunito Sans'; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; opacity:.7; width:80px; flex-shrink:0; }
   .agenda-label{ font-family:'Nunito Sans'; font-size:13px; font-weight:600; }
   .agenda-label.libre-label{ opacity:.55; font-weight:400; font-style:italic; }
   .agenda-dot{
@@ -401,11 +403,16 @@
     const list = document.getElementById('agenda-list');
     list.innerHTML = '';
 
-    // fusionne créneaux occupés (source réelle) et créneaux libres (calculés), triés par heure
+    // fusionne créneaux occupés (source réelle) et créneaux libres (calculés) ;
+    // les événements "toute la journée" (ex: jours fériés, anniversaires) sont
+    // épinglés en premier, comme dans Gmail/Outlook, puis le reste est trié par heure
     const rows = [
-      ...occupes.map(c => ({ debut: c.date_debut, fin: c.date_fin, libre: false, titre: c.titre })),
-      ...libres.map(c => ({ debut: c.debut, fin: c.fin, libre: true })),
-    ].sort((a, b) => new Date(a.debut) - new Date(b.debut));
+      ...occupes.map(c => ({ debut: c.date_debut, fin: c.date_fin, libre: false, titre: c.titre, touteJournee: !!c.toute_la_journee })),
+      ...libres.map(c => ({ debut: c.debut, fin: c.fin, libre: true, touteJournee: false })),
+    ].sort((a, b) => {
+      if (a.touteJournee !== b.touteJournee) return a.touteJournee ? -1 : 1;
+      return new Date(a.debut) - new Date(b.debut);
+    });
 
     if (rows.length === 0){
       list.innerHTML = '<div class="agenda-row libre"><span class="agenda-label libre-label">Aucun créneau trouvé pour aujourd\'hui</span></div>';
@@ -414,7 +421,12 @@
 
     rows.forEach(r => {
       const row = document.createElement('div');
-      row.className = 'agenda-row' + (r.libre ? ' libre' : '');
+      row.className = 'agenda-row' + (r.libre ? ' libre' : '') + (r.touteJournee ? ' toute-journee' : '');
+      if (r.touteJournee){
+        row.innerHTML = `<span class="agenda-time toute-journee-badge">Journée</span><span class="agenda-dot"></span><span class="agenda-label">${r.titre || 'Sans titre'}</span>`;
+        list.appendChild(row);
+        return;
+      }
       const time = `${formatHeure(r.debut)}–${formatHeure(r.fin)}`;
       row.innerHTML = r.libre
         ? `<span class="agenda-time">${time}</span><span class="agenda-label libre-label">Libre</span>`
