@@ -187,6 +187,39 @@
   .day-detail-title{ font-family:'Quicksand'; font-weight:700; font-size:14px; margin-bottom:6px; }
   .day-detail-line{ opacity:.8; margin-bottom:3px; }
 
+  /* ---- Agenda principal (info dominante) ---- */
+  .agenda-principal{ margin-bottom:14px; }
+  .agenda-principal-label{
+    font-family:'Nunito Sans'; font-size:10.5px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.05em; opacity:.55; margin-bottom:7px;
+  }
+  .agenda-principal-row{
+    display:flex; align-items:baseline; gap:9px; padding:8px 0;
+    border-bottom:1px solid rgba(128,128,128,.15);
+  }
+  .agenda-principal-row:last-child{ border-bottom:none; }
+  .agenda-principal-time{ font-family:'Space Mono', monospace; font-weight:700; font-size:12.5px; color:var(--gold-bright); flex-shrink:0; }
+  .agenda-principal-titre{ font-family:'Quicksand'; font-weight:600; font-size:14.5px; line-height:1.3; }
+  .agenda-vide{ font-size:12.5px; opacity:.6; font-style:italic; padding:6px 0; }
+
+  /* ---- Icônes info secondaires (cliquables) ---- */
+  .info-icons-row{ display:flex; gap:10px; margin-bottom:4px; }
+  .info-icon-btn{
+    width:42px; height:42px; border-radius:50%; border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-size:17px; font-weight:700; color:#fff;
+    background: var(--icon-color, #888);
+    box-shadow: 0 3px 8px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.3);
+    transition: transform .15s ease;
+  }
+  .info-icon-btn.open{ transform: scale(1.1); box-shadow: 0 0 0 3px rgba(244,201,105,.5), 0 3px 8px rgba(0,0,0,.3); }
+  .info-panel{
+    margin-top:10px; padding:12px 13px; border-radius:12px;
+    background: rgba(128,128,128,.12); font-size:12px; line-height:1.55;
+  }
+  .info-panel-titre{ font-family:'Quicksand'; font-weight:700; font-size:13px; margin-bottom:5px; }
+  .info-panel-conseil{ opacity:.85; margin-top:6px; }
+
   .status-msg{ text-align:center; font-size:12px; opacity:.6; padding:20px 0; }
 
   .bottom-nav{
@@ -478,14 +511,66 @@
     }
   }
 
+  const PHASE_COLOR = { regles:'var(--coral)', folliculaire:'var(--ph-folliculaire)', ovulation:'var(--ph-ovulation)', luteale:'var(--ph-luteale)' };
+  const PHASE_SYMBOLE = { regles:'🩸', folliculaire:'F', ovulation:'O', luteale:'L' };
+  const ELEMENT_COLOR_MAP = { bois:'var(--el-bois)', feu:'var(--el-feu)', terre:'var(--el-terre)', metal:'var(--el-metal)', eau:'var(--el-eau)' };
+  const ELEMENT_LETTRE = { bois:'B', feu:'F', terre:'T', metal:'M', eau:'E' };
+  const LUNE_EMOJI = { nouvelle:'🌑', croissante:'🌒', pleine:'🌕', decroissante:'🌘' };
+
+  let infoActuelle = null; // conserve les données du jour affiché pour les panneaux à la demande
+
   function afficherDetailJour(iso, info){
     const box = document.getElementById('day-detail');
     if (!info){ box.style.display = 'none'; return; }
+    infoActuelle = info;
 
     const dateLisible = new Date(iso).toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
-    let lignes = [];
 
-    if (info.cycle){
+    // ---- Agenda : l'info principale, toujours visible en premier ----
+    let agendaHTML = `<div class="agenda-principal"><div class="agenda-principal-label">Aujourd'hui</div>`;
+    if (info.agenda_creneaux && info.agenda_creneaux.length > 0){
+      const tries = [...info.agenda_creneaux].sort((a,b) => new Date(a.debut) - new Date(b.debut));
+      for (const c of tries){
+        agendaHTML += `<div class="agenda-principal-row">
+          <span class="agenda-principal-time">${formatHeure(c.debut)}–${formatHeure(c.fin)}</span>
+          <span class="agenda-principal-titre">${c.titre || 'Sans titre'}</span>
+        </div>`;
+      }
+    } else {
+      agendaHTML += `<div class="agenda-vide">Rien de prévu — journée libre</div>`;
+    }
+    agendaHTML += `</div>`;
+
+    // ---- Icônes secondaires cliquables (cycle / élément / lune) ----
+    let iconsHTML = `<div class="info-icons-row">`;
+    if (info.cycle && info.cycle.phase){
+      iconsHTML += `<button class="info-icon-btn" id="icon-cycle" style="--icon-color:${PHASE_COLOR[info.cycle.phase] || '#888'};" onclick="toggleInfoPanel('cycle')">${PHASE_SYMBOLE[info.cycle.phase] || '?'}</button>`;
+    }
+    if (info.chinois && info.chinois.element){
+      iconsHTML += `<button class="info-icon-btn" id="icon-element" style="--icon-color:${ELEMENT_COLOR_MAP[info.chinois.element] || '#888'};" onclick="toggleInfoPanel('element')">${ELEMENT_LETTRE[info.chinois.element] || '?'}</button>`;
+    }
+    if (info.lune){
+      iconsHTML += `<button class="info-icon-btn" id="icon-lune" style="--icon-color:#3a3560;" onclick="toggleInfoPanel('lune')">${LUNE_EMOJI[info.lune.phase] || '🌙'}</button>`;
+    }
+    iconsHTML += `</div><div id="info-panel-zone"></div>`;
+
+    box.style.display = 'block';
+    box.innerHTML = `<div class="day-detail-title">${dateLisible}</div>` + agendaHTML + iconsHTML;
+  }
+
+  function toggleInfoPanel(cle){
+    const zone = document.getElementById('info-panel-zone');
+    const btn = document.getElementById(`icon-${cle}`);
+    const dejaOuvert = btn.classList.contains('open');
+
+    document.querySelectorAll('.info-icon-btn').forEach(b => b.classList.remove('open'));
+    if (dejaOuvert){ zone.innerHTML = ''; return; }
+    btn.classList.add('open');
+
+    const info = infoActuelle;
+    let html = '';
+
+    if (cle === 'cycle' && info.cycle){
       const labelPhase = { regles:'Règles', folliculaire:'Phase folliculaire', ovulation:'Ovulation', luteale:'Phase lutéale' };
       const descPhase = {
         regles:'Chute des hormones : énergie basse, palier 1 systématique.',
@@ -499,28 +584,24 @@
         ovulation:'💡 Pic de performance, mais risque ligamentaire (genou) légèrement accru — échauffement sérieux avant l\'effort intense.',
         luteale:'💡 Fatigue et fringales plus fréquentes : intensité modérée, moins de sel / plus de potassium contre les ballonnements.',
       };
-      if (info.cycle.jour1_regles) lignes.push('🩸 1ᵉʳ jour des règles — ' + descPhase.regles);
-      else if (info.cycle.phase === 'regles') lignes.push('Règles — ' + descPhase.regles);
-      else if (info.cycle.phase) lignes.push((labelPhase[info.cycle.phase] || info.cycle.phase) + ' — ' + (descPhase[info.cycle.phase] || ''));
-      if (info.cycle.phase && conseilPhase[info.cycle.phase]) lignes.push(conseilPhase[info.cycle.phase]);
+      let titre = labelPhase[info.cycle.phase] || info.cycle.phase;
+      if (info.cycle.jour1_regles) titre = '🩸 1ᵉʳ jour des règles';
+      html = `<div class="info-panel"><div class="info-panel-titre">${titre}</div>${descPhase[info.cycle.phase] || ''}`;
       if (info.cycle.fin_luteale){
-        lignes.push('4 derniers jours avant les règles — baisse d\'énergie attendue');
-        lignes.push('💡 Calcium + vitamine D (végé) : yaourt, fromage, boisson végétale enrichie, œufs, tofu enrichi en calcium — pistes étudiées pour atténuer les symptômes prémenstruels.');
+        html += `<div class="info-panel-conseil">4 derniers jours avant les règles — baisse d'énergie attendue.<br>💡 Calcium + vitamine D (végé) : yaourt, fromage, boisson végétale enrichie, œufs, tofu enrichi en calcium — pistes étudiées pour atténuer les symptômes prémenstruels.</div>`;
+      } else if (conseilPhase[info.cycle.phase]){
+        html += `<div class="info-panel-conseil">${conseilPhase[info.cycle.phase]}</div>`;
       }
-    } else {
-      lignes.push('Cycle non calculable (aucune date de règles déclarée)');
+      html += `</div>`;
     }
 
-    if (info.chinois?.terme_du_jour){
-      lignes.push(`Terme solaire : ${info.chinois.terme_du_jour.nom_fr} (${info.chinois.terme_du_jour.nom_cn})`);
+    if (cle === 'element' && info.chinois){
+      html = `<div class="info-panel"><div class="info-panel-titre">${info.chinois.element_label}${info.chinois.terme_du_jour ? ' — ' + info.chinois.terme_du_jour.nom_fr : ''}</div>${info.chinois.description || ''}`;
+      if (info.chinois.geste) html += `<div class="info-panel-conseil">💡 ${info.chinois.geste}</div>`;
+      html += `</div>`;
     }
-    if (info.chinois?.description){
-      lignes.push(`${info.chinois.element_label} — ${info.chinois.description}`);
-    }
-    if (info.chinois?.geste){
-      lignes.push(`💡 ${info.chinois.geste}`);
-    }
-    if (info.lune){
+
+    if (cle === 'lune' && info.lune){
       const labelLune = { nouvelle:'Nouvelle lune', croissante:'Lune croissante', pleine:'Pleine lune', decroissante:'Lune décroissante' };
       const descLune = {
         nouvelle:'Face visible non éclairée — jour 1 du cycle lunaire.',
@@ -534,20 +615,10 @@
         pleine:'Marée de vive-eau (Soleil-Terre-Lune alignés).',
         decroissante:'Vers une marée de morte-eau (dernier quartier, quadrature).',
       };
-      lignes.push(`Lune : ${labelLune[info.lune.phase] || info.lune.phase} — ${descLune[info.lune.phase] || ''}`);
-      lignes.push(`🌊 ${mareeLune[info.lune.phase] || ''}`);
-    }
-    if (info.agenda_occupe > 0){
-      const pluriel = info.agenda_occupe > 1 ? 'créneaux occupés' : 'créneau occupé';
-      lignes.push(`📅 ${info.agenda_occupe} ${pluriel} :`);
-      for (const c of (info.agenda_creneaux || [])){
-        lignes.push(`&nbsp;&nbsp;• ${formatHeure(c.debut)}–${formatHeure(c.fin)} — ${c.titre || 'sans titre'}`);
-      }
+      html = `<div class="info-panel"><div class="info-panel-titre">${labelLune[info.lune.phase] || info.lune.phase}</div>${descLune[info.lune.phase] || ''}<div class="info-panel-conseil">🌊 ${mareeLune[info.lune.phase] || ''} <span style="opacity:.6;">(aucun lien démontré avec l'énergie humaine)</span></div></div>`;
     }
 
-    box.style.display = 'block';
-    box.innerHTML = `<div class="day-detail-title">${dateLisible}</div>` +
-      lignes.map(l => `<div class="day-detail-line">${l}</div>`).join('');
+    zone.innerHTML = html;
   }
 
   function changerMois(delta){
