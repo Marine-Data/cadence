@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Cadence — Vue du jour</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito+Sans:wght@400;600;700&family=Space+Mono:wght@400;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night-bg:#1c1b30;
+    --night-card:#2B2A4A;
+    --night-card-2:#332f57;
+    --day-bg:#f4f1e9;
+    --day-card:#ffffff;
+    --day-card-2:#eeeae0;
+    --gold:#D9A441;
+    --gold-bright:#F4C969;
+    --element-accent:#c94f3a; /* Feu, cette semaine */
+    --text-night:#f4f0e6;
+    --text-night-dim:#c9c6de;
+    --text-day:#12283e;
+    --text-day-dim:#5b6472;
+    --transition-speed: .6s;
+
+    /* --- relief / verre --- */
+    --sheen: rgba(255,255,255,0.14);
+    --sheen-day: rgba(255,255,255,0.55);
+    --glass-border-night: rgba(255,255,255,0.10);
+    --glass-border-day: rgba(255,255,255,0.65);
+    --shadow-deep-night: 0 14px 30px -8px rgba(0,0,0,0.55), 0 3px 8px rgba(0,0,0,0.35);
+    --shadow-deep-day: 0 14px 28px -10px rgba(20,30,60,0.22), 0 3px 8px rgba(20,30,60,0.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Nunito Sans', sans-serif;
+    background:#0b0b14;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:24px;
+  }
+  .phone{
+    width:390px; height:780px; border-radius:44px; overflow:hidden;
+    position:relative; box-shadow:0 30px 80px rgba(0,0,0,.55);
+    background:var(--night-bg); color:var(--text-night);
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+  }
+  .phone.day{ background:var(--day-bg); color:var(--text-day); }
+  .scroll{ position:absolute; inset:0; overflow-y:auto; padding:20px 18px 100px 18px; }
+
+  .topbar{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
+  .wordmark{ font-family:'Quicksand'; font-weight:600; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold-bright); opacity:.85; margin-bottom:2px; }
+  .date-title{ font-family:'Quicksand'; font-weight:700; font-size:21px; }
+  .toggle{
+    background: linear-gradient(160deg, var(--sheen), rgba(255,255,255,0) 55%), rgba(128,128,128,.18);
+    border:1px solid var(--glass-border-night); border-radius:20px; padding:7px 12px;
+    font-family:'Nunito Sans'; font-size:12px; font-weight:700; cursor:pointer; color:inherit;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 4px 10px rgba(0,0,0,.25);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .toggle:active{ transform: translateY(1px) scale(.97); }
+  .phone.day .toggle{ border-color: var(--glass-border-day); box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 4px 10px rgba(20,30,60,.12); }
+
+  .element-chip{
+    display:inline-flex; align-items:center; gap:6px;
+    background: linear-gradient(160deg, rgba(255,255,255,.35), rgba(255,255,255,0) 60%), var(--element-accent);
+    color:#fff;
+    padding:5px 11px; border-radius:13px;
+    font-family:'Nunito Sans'; font-weight:700; font-size:11px;
+    margin-bottom:18px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 4px 10px rgba(201,79,58,.35);
+  }
+  .element-dot{
+    width:8px; height:8px; border-radius:50%;
+    background: radial-gradient(circle at 32% 28%, #fff, #fff8 60%);
+    box-shadow: 0 1px 2px rgba(0,0,0,.25);
+  }
+
+  .section-label{
+    font-family:'Nunito Sans'; font-size:11px; font-weight:700;
+    letter-spacing:.05em; text-transform:uppercase; opacity:.6;
+    margin:22px 0 10px 2px;
+  }
+  .section-label:first-of-type{ margin-top:0; }
+
+  /* ---- Rituel card ---- */
+  .card{
+    background: linear-gradient(160deg, var(--sheen) 0%, rgba(255,255,255,0) 50%), var(--night-card);
+    border:1px solid var(--glass-border-night);
+    border-radius:18px; padding:16px 17px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.10), var(--shadow-deep-night);
+    transition: background var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+  }
+  .phone.day .card{
+    background: linear-gradient(160deg, var(--sheen-day) 0%, rgba(255,255,255,0) 55%), var(--day-card);
+    border-color: var(--glass-border-day);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.8), var(--shadow-deep-day);
+  }
+
+  .ritual-card{ position:relative; overflow:hidden; }
+  .lien-saisie{
+    display:block; text-align:center; font-family:'Nunito Sans'; font-weight:700; font-size:12px;
+    color:var(--gold-bright); text-decoration:none; margin:10px 0 4px 0; padding:6px;
+  }
+  .ritual-card::before{
+    content:''; position:absolute; top:0; left:0; width:4px; height:100%;
+    background:var(--element-accent);
+  }
+  .ritual-theme{ font-family:'Nunito Sans'; font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; opacity:.65; margin-left:6px; }
+  .ritual-title{ font-family:'Quicksand'; font-weight:700; font-size:18px; margin:5px 0 12px 6px; }
+  .ritual-meta{ display:flex; justify-content:space-between; align-items:center; margin-left:6px; }
+  .intensity{ display:flex; gap:5px; align-items:center; }
+  .intensity-label{ font-size:10.5px; opacity:.65; margin-right:3px; }
+  .intensity-dot{
+    width:8px; height:8px; border-radius:50%;
+    background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.4), rgba(128,128,128,.25) 70%);
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.2);
+  }
+  .intensity-dot.on{
+    background: radial-gradient(circle at 32% 28%, #fff, var(--gold-bright) 55%, var(--gold) 100%);
+    box-shadow: 0 1px 3px rgba(0,0,0,.35);
+  }
+  .ritual-time{ font-family:'Space Mono', monospace; font-weight:700; font-size:13.5px; color:var(--gold-bright); }
+  .ritual-time-label{ font-size:9.5px; opacity:.6; display:block; text-align:right; font-family:'Nunito Sans'; }
+
+  /* ---- Corrélation personnelle ---- */
+  .correlation-card{ position:relative; overflow:hidden; }
+  .correlation-card::before{
+    content:''; position:absolute; top:0; left:0; width:4px; height:100%;
+    background: var(--ph-luteale, #8b7cb5);
+  }
+  .correlation-texte{ font-family:'Nunito Sans'; font-size:13px; line-height:1.5; margin-left:6px; }
+  .correlation-progress{ font-size:10.5px; opacity:.55; margin:8px 0 0 6px; font-family:'Nunito Sans'; }
+
+  /* ---- Agenda timeline ---- */
+  .agenda-list{ display:flex; flex-direction:column; gap:8px; }
+  .agenda-row{
+    display:flex; align-items:center; gap:12px;
+    background: linear-gradient(160deg, var(--sheen) 0%, rgba(255,255,255,0) 50%), var(--night-card);
+    border:1px solid var(--glass-border-night);
+    border-radius:14px; padding:11px 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 4px 12px rgba(0,0,0,.3);
+    transition: background var(--transition-speed) ease;
+  }
+  .phone.day .agenda-row{
+    background: linear-gradient(160deg, var(--sheen-day) 0%, rgba(255,255,255,0) 55%), var(--day-card);
+    border-color: var(--glass-border-day);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 3px 10px rgba(20,30,60,.08);
+  }
+  .agenda-row.libre{ background:transparent; border:1.5px dashed rgba(128,128,128,.3); box-shadow:none; }
+  .agenda-time{ font-family:'Space Mono', monospace; font-size:12px; font-weight:700; opacity:.85; width:80px; flex-shrink:0; }
+  .agenda-label{ font-family:'Nunito Sans'; font-size:13px; font-weight:600; }
+  .agenda-label.libre-label{ opacity:.55; font-weight:400; font-style:italic; }
+  .agenda-dot{
+    width:8px; height:8px; border-radius:50%; flex-shrink:0;
+    background: radial-gradient(circle at 32% 28%, #fff, var(--element-accent) 60%);
+    box-shadow: 0 1px 2px rgba(0,0,0,.3);
+  }
+
+  /* ---- Tasks ---- */
+  .task-list{ display:flex; flex-direction:column; gap:8px; }
+  .task-row{
+    display:flex; align-items:center; gap:12px;
+    background: linear-gradient(160deg, var(--sheen) 0%, rgba(255,255,255,0) 50%), var(--night-card);
+    border:1px solid var(--glass-border-night);
+    border-radius:14px; padding:12px 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 4px 12px rgba(0,0,0,.3);
+    transition: background var(--transition-speed) ease;
+  }
+  .phone.day .task-row{
+    background: linear-gradient(160deg, var(--sheen-day) 0%, rgba(255,255,255,0) 55%), var(--day-card);
+    border-color: var(--glass-border-day);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 3px 10px rgba(20,30,60,.08);
+  }
+  .checkbox{
+    width:19px; height:19px; border-radius:6px; border:2px solid rgba(128,128,128,.4); flex-shrink:0;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.15);
+  }
+  .checkbox.done{
+    background: radial-gradient(circle at 32% 26%, #fff, var(--gold-bright) 55%, var(--gold) 100%);
+    border-color:var(--gold-bright); position:relative;
+    box-shadow: 0 2px 5px rgba(0,0,0,.3);
+  }
+  .checkbox.done::after{ content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; color:#2B2A4A; font-weight:700; }
+  .task-label{ font-family:'Nunito Sans'; font-size:13.5px; font-weight:600; flex:1; }
+  .task-label.done{ opacity:.45; text-decoration:line-through; }
+  .priority-pill{ font-family:'Nunito Sans'; font-size:9.5px; font-weight:700; padding:3px 8px; border-radius:9px; text-transform:uppercase; letter-spacing:.03em; }
+  .priority-pill.haute{ background:rgba(201,79,58,.18); color:var(--element-accent); box-shadow: inset 0 1px 0 rgba(255,255,255,.15); }
+  .priority-pill.normale{ background:rgba(128,128,128,.18); opacity:.7; box-shadow: inset 0 1px 0 rgba(255,255,255,.1); }
+
+  /* ---- Weather chip ---- */
+  .weather-card{ display:flex; align-items:center; gap:14px; }
+  .weather-emoji{ font-size:30px; }
+  .weather-temp{ font-family:'Space Mono', monospace; font-weight:700; font-size:19px; }
+  .weather-desc{ font-family:'Nunito Sans'; font-size:12px; opacity:.7; margin-top:2px; }
+
+  /* ---- Bottom nav ---- */
+  .bottom-nav{
+    position:absolute; bottom:0; left:0; width:100%;
+    display:flex; justify-content:space-around; align-items:center;
+    padding:14px 10px 20px 10px;
+    background: linear-gradient(0deg, var(--night-card) 0%, rgba(43,42,74,.92) 100%);
+    border-top:1px solid rgba(255,255,255,.08);
+    box-shadow: 0 -8px 20px rgba(0,0,0,.35);
+    backdrop-filter: blur(12px);
+    transition: background var(--transition-speed) ease;
+  }
+  .phone.day .bottom-nav{
+    background: linear-gradient(0deg, var(--day-card) 0%, rgba(255,255,255,.92) 100%);
+    border-top:1px solid rgba(0,0,0,.05);
+    box-shadow: 0 -8px 20px rgba(20,30,60,.08);
+  }
+  .nav-item{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:9.5px; font-family:'Nunito Sans'; font-weight:700; opacity:.45; text-decoration:none; color:inherit; }
+  .nav-item.active{ opacity:1; color:var(--gold-bright); }
+  .nav-icon{ font-size:18px; }
+  .nav-icon svg{ width:19px; height:19px; display:block; fill:currentColor; }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+  <div class="scroll">
+    <div class="topbar">
+      <div>
+        <div class="wordmark">Cadence</div>
+        <div class="date-title">Lundi 6 juillet</div>
+      </div>
+      <button class="toggle" onclick="toggleDayNight()">🌙 / ☀️</button>
+    </div>
+
+    <div class="element-chip"><span class="element-dot"></span> Semaine du Feu</div>
+
+    <div class="section-label">Ton rituel du jour</div>
+    <div class="card ritual-card" id="ritual-card">
+      <span class="ritual-theme" id="ritual-theme">…</span>
+      <div class="ritual-title" id="ritual-title">Chargement du rituel…</div>
+      <div class="ritual-meta">
+        <div class="intensity">
+          <span class="intensity-label">Palier</span>
+          <span class="intensity-dot" id="dot-1"></span>
+          <span class="intensity-dot" id="dot-2"></span>
+          <span class="intensity-dot" id="dot-3"></span>
+        </div>
+        <div>
+          <span class="ritual-time" id="ritual-time">—</span>
+          <span class="ritual-time-label" id="ritual-time-label"></span>
+        </div>
+      </div>
+    </div>
+    <a href="saisie-manuelle.html" class="lien-saisie">Faire ma saisie du jour →</a>
+
+    <div class="section-label">Météo <span style="opacity:.5; font-weight:400; text-transform:none;">(pas encore branchée)</span></div>
+    <div class="card weather-card">
+      <span class="weather-emoji">
+        <svg viewBox="0 0 64 64" width="36" height="36">
+          <defs>
+            <radialGradient id="sunGrad" cx="35%" cy="30%" r="70%">
+              <stop offset="0%" stop-color="#fff9e0"/>
+              <stop offset="55%" stop-color="var(--gold-bright)"/>
+              <stop offset="100%" stop-color="var(--gold)"/>
+            </radialGradient>
+            <linearGradient id="cloudGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="100%" stop-color="#d8dbe3"/>
+            </linearGradient>
+          </defs>
+          <circle cx="40" cy="24" r="14" fill="url(#sunGrad)"/>
+          <path d="M18 44c-6 0-11-5-11-11 0-5.5 4-10 9.4-10.8C18 16 23 12 29 12c6.6 0 12 4.7 13.2 11 4.9.6 8.8 4.8 8.8 9.9 0 5.6-4.5 10.1-10 10.1H18Z" fill="url(#cloudGrad)"/>
+        </svg>
+      </span>
+      <div>
+        <div class="weather-temp">22°C</div>
+        <div class="weather-desc">Éclaircies — bonne fenêtre pour sortir vers 12h30</div>
+      </div>
+    </div>
+
+    <div class="section-label">Agenda</div>
+    <div class="agenda-list" id="agenda-list">
+      <div class="agenda-row libre"><span class="agenda-label libre-label">Chargement de l'agenda…</span></div>
+    </div>
+
+    <div class="section-label">Tâches <span style="opacity:.5; font-weight:400; text-transform:none;">(pas encore branchées)</span></div>
+    <div class="task-list">
+      <div class="task-row">
+        <div class="checkbox"></div>
+        <div class="task-label">Envoyer le lien du sondage à Marine</div>
+        <span class="priority-pill haute">Haute</span>
+      </div>
+      <div class="task-row">
+        <div class="checkbox done"></div>
+        <div class="task-label done">Session prep repas dimanche</div>
+      </div>
+      <div class="task-row">
+        <div class="checkbox"></div>
+        <div class="task-label">Racheter du tofu fumé</div>
+        <span class="priority-pill normale">Normale</span>
+      </div>
+    </div>
+
+    <div class="section-label">Corrélation personnelle <span style="opacity:.5; font-weight:400; text-transform:none;">(basée sur tes vrais check-ins)</span></div>
+    <div class="card correlation-card" id="correlation-card">
+      <div class="correlation-texte" id="correlation-texte">Chargement…</div>
+      <div class="correlation-progress" id="correlation-progress" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <a href="vue-du-jour.html" class="nav-item active"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 3.2 3 11h2v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9h2L12 3.2Z"/></svg></span>Jour</a>
+    <a href="calendrier-unifie.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M7 2v2H5a2 2 0 0 0-2 2v2h18V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7Zm-4 8v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V10H3Zm4 3h3v3H7v-3Z"/></svg></span>Calendrier</a>
+    <a href="repas.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 0 1 18 0v1H3v-1Zm-1 3h20l-1.4 5.6A2 2 0 0 1 18.66 21H5.34a2 2 0 0 1-1.94-1.4L2 14Z"/></svg></span>Repas</a>
+    <a href="budget.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Zm0 2.3 6.5 3.6L12 11.5 5.5 7.9 12 4.3ZM5 9.2l6 3.3v7L5 16.2V9.2Zm8 10.3v-7l6-3.3v7l-6 3.3Z"/></svg></span>Budget</a>
+    <a href="reglages.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><g><rect x="10.7" y="0" width="2.6" height="4.2" rx="1"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(45 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(90 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(135 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(180 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(225 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(270 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(315 12 12)"/></g></svg></span>Réglages</a>
+  </div>
+</div>
+
+<script>
+  let isDay = false;
+  function toggleDayNight(){
+    isDay = !isDay;
+    document.getElementById('phone').classList.toggle('day', isDay);
+  }
+
+  // --- Connexion à Supabase (projet kdrama-app, fonctions orga_*) ---
+  const SUPABASE_URL = "https://osqyczwawbbwjwaubtvc.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXljendhd2Jid2p3YXVidHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5Nzk1MjUsImV4cCI6MjA5NzU1NTUyNX0.Lk2iuL3v_AGuXbyG5yU_-cfvnOtmYoWxiYdyCVKxXzg";
+
+  function formatHeure(iso){
+    return new Date(iso).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris' });
+  }
+
+  function renderRituel(rituel){
+    const themeEl = document.getElementById('ritual-theme');
+    const titleEl = document.getElementById('ritual-title');
+    const timeEl = document.getElementById('ritual-time');
+    const timeLabelEl = document.getElementById('ritual-time-label');
+
+    if (!rituel){
+      themeEl.textContent = '—';
+      titleEl.textContent = "Pas de rituel calculé pour aujourd'hui";
+      timeEl.textContent = '—';
+      timeLabelEl.textContent = '';
+      return;
+    }
+
+    themeEl.textContent = rituel.theme;
+    titleEl.textContent = `${rituel.duree_minutes_requise} min · palier ${rituel.palier}`;
+
+    for (let i = 1; i <= 3; i++){
+      document.getElementById(`dot-${i}`).classList.toggle('on', i <= rituel.palier);
+    }
+
+    if (rituel.creneau_debut && rituel.creneau_fin){
+      timeEl.textContent = `${formatHeure(rituel.creneau_debut)} → ${formatHeure(rituel.creneau_fin)}`;
+      timeLabelEl.textContent = 'créneau libre détecté';
+    } else {
+      timeEl.textContent = 'Aucun créneau libre';
+      timeLabelEl.textContent = "aujourd'hui";
+    }
+
+    // petite note discrète sur la raison du palier, sous le titre
+    if (rituel.raison_palier){
+      const note = document.createElement('div');
+      note.style.cssText = 'font-size:11px; opacity:.55; margin:-6px 0 10px 6px; font-family:"Nunito Sans";';
+      note.textContent = rituel.raison_palier;
+      titleEl.insertAdjacentElement('afterend', note);
+    }
+  }
+
+  function renderAgenda(occupes, libres){
+    const list = document.getElementById('agenda-list');
+    list.innerHTML = '';
+
+    // fusionne créneaux occupés (source réelle) et créneaux libres (calculés), triés par heure
+    const rows = [
+      ...occupes.map(c => ({ debut: c.date_debut, fin: c.date_fin, libre: false, titre: c.titre })),
+      ...libres.map(c => ({ debut: c.debut, fin: c.fin, libre: true })),
+    ].sort((a, b) => new Date(a.debut) - new Date(b.debut));
+
+    if (rows.length === 0){
+      list.innerHTML = '<div class="agenda-row libre"><span class="agenda-label libre-label">Aucun créneau trouvé pour aujourd\'hui</span></div>';
+      return;
+    }
+
+    rows.forEach(r => {
+      const row = document.createElement('div');
+      row.className = 'agenda-row' + (r.libre ? ' libre' : '');
+      const time = `${formatHeure(r.debut)}–${formatHeure(r.fin)}`;
+      row.innerHTML = r.libre
+        ? `<span class="agenda-time">${time}</span><span class="agenda-label libre-label">Libre</span>`
+        : `<span class="agenda-time">${time}</span><span class="agenda-dot"></span><span class="agenda-label">${r.titre || 'Occupé (sans titre)'}</span>`;
+      list.appendChild(row);
+    });
+  }
+
+  async function chargerVueDuJour(){
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/get-vue-jour`, {
+        headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      renderRituel(data.rituel);
+      renderAgenda(data.creneaux_occupes || [], data.creneaux_libres || []);
+    } catch (err) {
+      console.error('Erreur de chargement Cadence :', err);
+      document.getElementById('ritual-title').textContent = 'Impossible de charger le rituel — réessaie plus tard';
+      document.getElementById('agenda-list').innerHTML = '<div class="agenda-row libre"><span class="agenda-label libre-label">Agenda indisponible</span></div>';
+    }
+  }
+
+  function renderCorrelation(data){
+    const texteEl = document.getElementById('correlation-texte');
+    const progressEl = document.getElementById('correlation-progress');
+
+    if (!data || data.error){
+      texteEl.textContent = "Corrélation indisponible pour le moment.";
+      progressEl.style.display = 'none';
+      return;
+    }
+
+    if (!data.assez_de_donnees){
+      texteEl.textContent = data.message;
+      progressEl.style.display = 'block';
+      progressEl.textContent = `${data.nb_jours_energie} jour(s) d'énergie · ${data.nb_jours_sommeil} jour(s) de sommeil enregistrés jusqu'ici.`;
+      return;
+    }
+
+    texteEl.textContent = data.insight_principal.texte;
+    progressEl.style.display = 'none';
+  }
+
+  async function chargerCorrelation(){
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/correlations-personnelles`, {
+        headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      const data = await res.json();
+      renderCorrelation(data);
+    } catch (err){
+      console.error('Erreur de chargement corrélation :', err);
+      renderCorrelation(null);
+    }
+  }
+
+  chargerVueDuJour();
+  chargerCorrelation();
+</script>
+
+</body>
+</html>

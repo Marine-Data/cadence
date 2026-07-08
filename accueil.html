@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Cadence — Accueil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito+Sans:wght@400;600;700&family=Space+Mono:wght@400;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night-sky-1:#1c1b38;
+    --night-sky-2:#2B2A4A;
+    --night-sea:#12343A;
+    --night-sea-2:#0b2226;
+    --day-sky-1:#F4C969;
+    --day-sky-2:#1D5FA8;
+    --day-sea:#1690A3;
+    --day-sea-2:#0d6d7d;
+    --gold:#D9A441;
+    --gold-bright:#F4C969;
+    --cream:#fdf8ec;
+    --card-bg-night: rgba(43,42,74,0.55);
+    --card-bg-day: rgba(255,255,255,0.28);
+    --text-night:#f4f0e6;
+    --text-day:#12283e;
+    --transition-speed: 1.1s;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Nunito Sans', sans-serif;
+    background:#0b0b14;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    padding:24px;
+  }
+  .phone{
+    width:390px;
+    height:780px;
+    border-radius:44px;
+    overflow:hidden;
+    position:relative;
+    box-shadow:0 30px 80px rgba(0,0,0,0.55);
+    background: var(--night-sky-2);
+    transition: background var(--transition-speed) ease;
+  }
+  .phone.day{ background: var(--day-sky-2); }
+
+  /* ---- SKY ---- */
+  .sky{
+    position:absolute; inset:0;
+    background: linear-gradient(180deg, var(--night-sky-1) 0%, var(--night-sky-2) 55%, var(--night-sea) 78%);
+    transition: background var(--transition-speed) ease;
+  }
+  .phone.day .sky{
+    background: linear-gradient(180deg, var(--day-sky-1) 0%, var(--day-sky-2) 50%, var(--day-sea) 78%);
+  }
+
+  /* stars / birds layer */
+  .celestial-layer{ position:absolute; inset:0; }
+  .star{
+    position:absolute; width:3px; height:3px; border-radius:50%;
+    background:#fff; opacity:.9;
+    box-shadow:0 0 6px 1px rgba(255,255,255,.8);
+    animation: twinkle 3.5s ease-in-out infinite;
+  }
+  .firefly{
+    position:absolute; width:5px; height:5px; border-radius:50%;
+    background: var(--gold-bright);
+    box-shadow:0 0 10px 3px rgba(244,201,105,0.8);
+    animation: float-firefly 6s ease-in-out infinite;
+    opacity:0;
+  }
+  .phone.day .star, .phone.day .firefly{ opacity:0 !important; }
+  @keyframes twinkle{ 0%,100%{opacity:.25;} 50%{opacity:1;} }
+  @keyframes float-firefly{
+    0%{ transform:translate(0,0); opacity:0; }
+    20%{opacity:1;}
+    50%{ transform:translate(10px,-14px); }
+    80%{opacity:.8;}
+    100%{ transform:translate(-6px,4px); opacity:0; }
+  }
+
+  .bird{
+    position:absolute; opacity:0;
+    font-size:12px; color:var(--text-day);
+    transition:opacity .8s ease;
+  }
+  .phone.day .bird{ opacity:.55; }
+
+  .sun-moon{
+    position:absolute; top:70px; right:60px;
+    width:64px; height:64px; border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #fdf3d8, var(--gold-bright) 60%, var(--gold) 100%);
+    box-shadow:0 0 50px 12px rgba(244,201,105,0.55);
+    transition: all var(--transition-speed) ease;
+  }
+  .phone:not(.day) .sun-moon{
+    background: radial-gradient(circle at 32% 28%, #ffffff, #e7e6f5 55%, #b9b8d9 100%);
+    box-shadow:0 0 30px 8px rgba(200,200,230,0.35);
+    right:90px;
+  }
+
+  /* ---- MOUNTAINS / FOREST silhouettes for depth ---- */
+  .silhouette{
+    position:absolute; left:0; width:100%;
+    fill: var(--night-sky-1);
+    transition: fill var(--transition-speed) ease, opacity var(--transition-speed) ease;
+  }
+  .phone.day .silhouette.far{ fill:#164a86; opacity:.55;}
+  .phone.day .silhouette.near{ fill:#0f3868; opacity:.85;}
+  .silhouette.far{ bottom:230px; opacity:.5; }
+  .silhouette.near{ bottom:200px; opacity:.85; }
+
+  /* ---- SEA ---- */
+  .sea{
+    position:absolute; bottom:0; left:0; width:100%; height:220px;
+    background: linear-gradient(180deg, var(--night-sea) 0%, var(--night-sea-2) 100%);
+    transition: background var(--transition-speed) ease;
+    overflow:hidden;
+  }
+  .phone.day .sea{
+    background: linear-gradient(180deg, var(--day-sea) 0%, var(--day-sea-2) 100%);
+  }
+  .wave{
+    position:absolute; left:-10%; width:120%;
+    opacity:.9;
+  }
+  .wave.back{ top:14px; animation: drift 9s linear infinite; opacity:.5; }
+  .wave.front{ top:34px; animation: drift 6.5s linear infinite reverse; }
+  @keyframes drift{
+    0%{ transform:translateX(0); }
+    100%{ transform:translateX(-40px); }
+  }
+  .foam{ stroke:#fff; stroke-width:2; fill:none; opacity:.75; }
+
+  /* ---- Top bar ---- */
+  .topbar{
+    position:absolute; top:0; left:0; width:100%;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:22px 22px 0 22px; z-index:10;
+  }
+  .greeting{
+    font-family:'Quicksand', sans-serif; font-weight:700; font-size:19px;
+    color: var(--text-night);
+    transition: color var(--transition-speed) ease;
+  }
+  .phone.day .greeting{ color: var(--text-day); }
+  .wordmark{
+    font-family:'Quicksand', sans-serif; font-weight:600; font-size:11px;
+    letter-spacing:.14em; text-transform:uppercase;
+    color: var(--gold-bright);
+    opacity:.85;
+    margin-bottom:2px;
+  }
+  .toggle{
+    background: rgba(255,255,255,0.18);
+    border:none; color:inherit; border-radius:20px;
+    padding:7px 13px; font-family:'Nunito Sans'; font-size:12.5px; font-weight:700;
+    cursor:pointer; color:var(--text-night);
+    backdrop-filter: blur(6px);
+  }
+  .phone.day .toggle{ color:var(--text-day); }
+
+  /* ---- Element chip (5 elements rotation) ---- */
+  .element-chip{
+    position:absolute; top:70px; left:22px; z-index:10;
+    display:flex; align-items:center; gap:6px;
+    background: var(--card-bg-night);
+    color: var(--text-night);
+    padding:6px 12px; border-radius:14px;
+    font-family:'Nunito Sans'; font-weight:700; font-size:11.5px;
+    backdrop-filter: blur(8px);
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+  }
+  .phone.day .element-chip{ background: var(--card-bg-day); color:var(--text-day); }
+  .element-dot{ width:8px; height:8px; border-radius:50%; background: var(--gold-bright); }
+
+  /* ---- Bottom card: rituel du jour ---- */
+  .bottom-sheet{
+    position:absolute; bottom:0; left:0; width:100%;
+    padding:20px 20px 26px 20px;
+    background: linear-gradient(180deg, rgba(11,11,20,0) 0%, rgba(11,11,20,0.55) 40%, rgba(11,11,20,0.82) 100%);
+    z-index:8;
+  }
+  .phone.day .bottom-sheet{
+    background: linear-gradient(180deg, rgba(11,25,45,0) 0%, rgba(11,25,45,0.35) 40%, rgba(11,25,45,0.62) 100%);
+  }
+  .ritual-card{
+    background: var(--card-bg-night);
+    backdrop-filter: blur(10px);
+    border-radius:20px;
+    padding:16px 18px;
+    color: var(--text-night);
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+  }
+  .phone.day .ritual-card{ background: var(--card-bg-day); color: var(--text-day); }
+  .ritual-label{
+    font-family:'Nunito Sans'; font-size:11px; font-weight:700;
+    letter-spacing:.04em; text-transform:uppercase; opacity:.75;
+  }
+  .ritual-title{
+    font-family:'Quicksand'; font-weight:700; font-size:19px; margin:4px 0 10px 0;
+  }
+  .ritual-meta{
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .intensity{ display:flex; gap:5px; align-items:center; }
+  .intensity-dot{ width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,0.25); }
+  .intensity-dot.on{ background: var(--gold-bright); }
+  .energy{
+    font-family:'Space Mono', monospace; font-weight:700; font-size:15px;
+    color: var(--gold-bright);
+  }
+  .energy-label{ font-size:10px; font-family:'Nunito Sans'; opacity:.7; display:block; text-align:right;}
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+  <div class="sky"></div>
+
+  <div class="sun-moon"></div>
+
+  <div class="celestial-layer" id="celestial"></div>
+
+  <!-- forest silhouettes for depth -->
+  <svg class="silhouette far" viewBox="0 0 390 120" preserveAspectRatio="none" height="120">
+    <path d="M0,120 L0,60 L30,30 L55,55 L80,20 L110,50 L140,15 L170,48 L200,25 L230,55 L260,18 L290,50 L320,28 L350,52 L390,20 L390,120 Z"/>
+  </svg>
+  <svg class="silhouette near" viewBox="0 0 390 100" preserveAspectRatio="none" height="100">
+    <path d="M0,100 L0,45 L20,10 L45,40 L70,5 L95,42 L125,12 L150,45 L180,8 L205,42 L235,15 L260,48 L290,10 L315,45 L345,18 L390,48 L390,100 Z"/>
+  </svg>
+
+  <!-- sea -->
+  <div class="sea">
+    <svg class="wave back" viewBox="0 0 500 40" height="40" width="500">
+      <path class="foam" d="M0,20 Q25,5 50,20 T100,20 T150,20 T200,20 T250,20 T300,20 T350,20 T400,20 T450,20 T500,20"/>
+    </svg>
+    <svg class="wave front" viewBox="0 0 500 40" height="40" width="500">
+      <path class="foam" d="M0,15 Q20,28 40,15 T80,15 T120,15 T160,15 T200,15 T240,15 T280,15 T320,15 T360,15 T400,15 T440,15 T480,15"/>
+    </svg>
+  </div>
+
+  <!-- topbar -->
+  <div class="topbar">
+    <div>
+      <div class="wordmark">Cadence</div>
+      <div class="greeting">Bonjour, Marine</div>
+    </div>
+    <button class="toggle" onclick="toggleDayNight()">🌙 / ☀️</button>
+  </div>
+
+  <div class="element-chip"><span class="element-dot"></span> Semaine du Feu</div>
+
+
+  <!-- bottom sheet: rituel du jour -->
+  <div class="bottom-sheet">
+    <a href="vue-du-jour.html" class="ritual-card" style="display:block; text-decoration:none; color:inherit;">
+      <div class="ritual-label">Rituel du jour · Focus</div>
+      <div class="ritual-title">5 min de respiration avant ta réunion de 14h</div>
+      <div class="ritual-meta">
+        <div class="intensity">
+          <span style="font-size:11px; opacity:.7; margin-right:2px;">Palier</span>
+          <span class="intensity-dot on"></span>
+          <span class="intensity-dot on"></span>
+          <span class="intensity-dot"></span>
+        </div>
+        <div style="text-align:right;">
+          <span class="energy">68%</span>
+          <span class="energy-label">énergie</span>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<script>
+  // generate stars + fireflies
+  const layer = document.getElementById('celestial');
+  for(let i=0;i<28;i++){
+    const s = document.createElement('div');
+    s.className='star';
+    s.style.left = Math.random()*100+'%';
+    s.style.top = (Math.random()*45)+'%';
+    s.style.animationDelay = (Math.random()*3)+'s';
+    layer.appendChild(s);
+  }
+  for(let i=0;i<6;i++){
+    const f = document.createElement('div');
+    f.className='firefly';
+    f.style.left = (20+Math.random()*60)+'%';
+    f.style.top = (55+Math.random()*15)+'%';
+    f.style.animationDelay = (Math.random()*5)+'s';
+    layer.appendChild(f);
+  }
+  // birds for day mode
+  const birdPositions = [[20,15],[35,10],[50,18],[70,12]];
+  birdPositions.forEach(([l,t])=>{
+    const b = document.createElement('div');
+    b.className='bird';
+    b.style.left = l+'%'; b.style.top = t+'%';
+    b.textContent = '˅';
+    layer.appendChild(b);
+  });
+
+  let isDay = false;
+  function toggleDayNight(){
+    isDay = !isDay;
+    document.getElementById('phone').classList.toggle('day', isDay);
+  }
+</script>
+
+</body>
+</html>

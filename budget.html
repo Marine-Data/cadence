@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Cadence — Budget</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito+Sans:wght@400;600;700&family=Space+Mono:wght@400;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night-bg:#1c1b30;
+    --night-card:#2B2A4A;
+    --day-bg:#f4f1e9;
+    --day-card:#ffffff;
+    --gold:#D9A441;
+    --gold-bright:#F4C969;
+    --coral:#c94f3a;
+    --text-night:#f4f0e6;
+    --text-day:#12283e;
+    --transition-speed:.6s;
+
+    --sheen: rgba(255,255,255,0.14);
+    --sheen-day: rgba(255,255,255,0.55);
+    --glass-border-night: rgba(255,255,255,0.10);
+    --glass-border-day: rgba(255,255,255,0.65);
+    --shadow-deep-night: 0 14px 30px -8px rgba(0,0,0,0.55), 0 3px 8px rgba(0,0,0,0.35);
+    --shadow-deep-day: 0 14px 28px -10px rgba(20,30,60,0.22), 0 3px 8px rgba(20,30,60,0.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Nunito Sans', sans-serif;
+    background:#0b0b14;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:24px;
+  }
+  .phone{
+    width:390px; height:780px; border-radius:44px; overflow:hidden;
+    position:relative; box-shadow:0 30px 80px rgba(0,0,0,.55);
+    background:var(--night-bg); color:var(--text-night);
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+  }
+  .phone.day{ background:var(--day-bg); color:var(--text-day); }
+  .scroll{ position:absolute; inset:0; overflow-y:auto; padding:20px 18px 100px 18px; }
+
+  .topbar{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; }
+  .wordmark{ font-family:'Quicksand'; font-weight:600; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold-bright); opacity:.85; margin-bottom:2px; }
+  .date-title{ font-family:'Quicksand'; font-weight:700; font-size:21px; }
+  .toggle{
+    background: linear-gradient(160deg, var(--sheen), rgba(255,255,255,0) 55%), rgba(128,128,128,.18);
+    border:1px solid var(--glass-border-night); border-radius:20px; padding:7px 12px;
+    font-family:'Nunito Sans'; font-size:12px; font-weight:700; cursor:pointer; color:inherit;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 4px 10px rgba(0,0,0,.25);
+  }
+  .phone.day .toggle{ border-color: var(--glass-border-day); box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 4px 10px rgba(20,30,60,.12); }
+
+  .section-label{
+    font-family:'Nunito Sans'; font-size:11px; font-weight:700;
+    letter-spacing:.05em; text-transform:uppercase; opacity:.6;
+    margin:22px 0 10px 2px;
+  }
+  .section-label:first-of-type{ margin-top:0; }
+  .section-hint{ font-weight:400; text-transform:none; opacity:.75; }
+
+  .card{
+    background: linear-gradient(160deg, var(--sheen) 0%, rgba(255,255,255,0) 50%), var(--night-card);
+    border:1px solid var(--glass-border-night);
+    border-radius:18px; padding:16px 17px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.10), var(--shadow-deep-night);
+  }
+  .phone.day .card{
+    background: linear-gradient(160deg, var(--sheen-day) 0%, rgba(255,255,255,0) 55%), var(--day-card);
+    border-color: var(--glass-border-day);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.8), var(--shadow-deep-day);
+  }
+
+  /* ---- Synthèse enveloppe ---- */
+  .synth-card{ position:relative; overflow:hidden; text-align:center; }
+  .synth-card::before{ content:''; position:absolute; top:0; left:0; width:4px; height:100%; background:var(--gold-bright); }
+  .reste-valeur{ font-family:'Space Mono', monospace; font-weight:700; font-size:34px; color:var(--gold-bright); margin:4px 0 2px 0; }
+  .reste-label{ font-size:11px; opacity:.65; }
+  .progress-track{
+    width:100%; height:10px; border-radius:8px; background:rgba(128,128,128,.18);
+    margin:14px 0 8px 0; overflow:hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,.3);
+  }
+  .progress-fill{
+    height:100%; border-radius:8px;
+    background: linear-gradient(90deg, var(--gold) 0%, var(--gold-bright) 100%);
+    transition: width .3s ease;
+  }
+  .progress-fill.over{ background: linear-gradient(90deg, var(--coral) 0%, #e07a5f 100%); }
+  .progress-meta{ display:flex; justify-content:space-between; font-size:10.5px; opacity:.6; }
+
+  .field-row{ margin-bottom:14px; }
+  .field-label{ font-family:'Nunito Sans'; font-size:11.5px; font-weight:700; opacity:.7; margin-bottom:6px; display:block; }
+  .field-input{
+    width:100%; padding:11px 12px; border-radius:12px; border:1.5px solid var(--glass-border-night);
+    background:rgba(128,128,128,.10); color:inherit; font-family:'Nunito Sans'; font-size:13.5px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,.2);
+  }
+  .phone.day .field-input{ border-color: var(--glass-border-day); background:rgba(0,0,0,.03); }
+  .field-row-inline{ display:flex; gap:8px; }
+  .field-row-inline .field-row{ flex:1; margin-bottom:0; }
+  .field-note{ font-size:10.5px; opacity:.7; line-height:1.4; }
+
+  .photo-import-row{ display:flex; gap:8px; }
+  .btn-secondary{
+    flex:1.3; display:flex; align-items:center; justify-content:center; text-align:center;
+    padding:11px 10px; border-radius:14px; cursor:pointer;
+    font-family:'Nunito Sans'; font-weight:700; font-size:12.5px; color:inherit;
+    background: rgba(128,128,128,.14); border:1.5px solid var(--glass-border-night);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .phone.day .btn-secondary{ border-color: var(--glass-border-day); }
+  .btn-secondary.has-file{ border-color:var(--gold-bright); }
+  .photo-analyse-btn{ flex:1; margin-top:0; }
+  .photo-analyse-btn:disabled{ opacity:.4; cursor:default; box-shadow:none; background: rgba(128,128,128,.25); color:inherit; }
+
+  .btn-primary{
+    width:100%; padding:12px; border:none; border-radius:14px; cursor:pointer;
+    font-family:'Nunito Sans'; font-weight:700; font-size:13.5px; color:#2B2A4A;
+    background: radial-gradient(circle at 32% 20%, #fff, var(--gold-bright) 45%, var(--gold) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 5px 14px rgba(217,164,65,.4);
+    margin-top:6px;
+  }
+  .btn-primary:disabled{ opacity:.5; cursor:default; }
+  .status-line{ font-size:11px; opacity:.6; margin-top:10px; text-align:center; min-height:14px; }
+  .status-line.error{ color:var(--coral); opacity:1; }
+  .status-line.ok{ color:var(--gold-bright); opacity:1; }
+
+  .depense-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:9px 0; border-bottom:1px solid rgba(128,128,128,.15);
+  }
+  .depense-row:last-child{ border-bottom:none; }
+  .depense-note{ font-size:12px; opacity:.8; }
+  .depense-date{ font-size:10px; opacity:.5; display:block; }
+  .depense-montant{ font-family:'Space Mono', monospace; font-weight:700; font-size:12.5px; color:var(--gold-bright); }
+
+  .historique-row{
+    display:flex; justify-content:space-between; align-items:center; cursor:pointer;
+    padding:10px 2px; border-bottom:1px solid rgba(128,128,128,.15);
+  }
+  .historique-row:last-child{ border-bottom:none; }
+  .historique-mois-label{ font-family:'Nunito Sans'; font-weight:700; font-size:12.5px; text-transform:capitalize; }
+  .historique-mois-nb{ font-size:10px; opacity:.5; display:block; }
+  .historique-mois-total{ font-family:'Space Mono', monospace; font-weight:700; font-size:12.5px; color:var(--gold-bright); }
+
+  .bottom-nav{
+    position:absolute; bottom:0; left:0; width:100%;
+    display:flex; justify-content:space-around; align-items:center;
+    padding:14px 6px 20px 6px;
+    background: linear-gradient(0deg, var(--night-card) 0%, rgba(43,42,74,.92) 100%);
+    border-top:1px solid rgba(255,255,255,.08);
+    box-shadow: 0 -8px 20px rgba(0,0,0,.35);
+    backdrop-filter: blur(12px);
+  }
+  .phone.day .bottom-nav{
+    background: linear-gradient(0deg, var(--day-card) 0%, rgba(255,255,255,.92) 100%);
+    border-top:1px solid rgba(0,0,0,.05);
+    box-shadow: 0 -8px 20px rgba(20,30,60,.08);
+  }
+  .nav-item{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:9px; font-family:'Nunito Sans'; font-weight:700; opacity:.45; text-decoration:none; color:inherit; }
+  .nav-item.active{ opacity:1; color:var(--gold-bright); }
+  .nav-icon svg{ width:18px; height:18px; display:block; fill:currentColor; }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+  <div class="scroll">
+    <div class="topbar">
+      <div>
+        <div class="wordmark">Cadence</div>
+        <div class="date-title">Budget</div>
+      </div>
+      <button class="toggle" onclick="toggleDayNight()">🌙 / ☀️</button>
+    </div>
+
+    <div class="section-label">Ce mois-ci</div>
+    <div class="card synth-card" id="synth-card">
+      <div class="reste-label">Il te reste</div>
+      <div class="reste-valeur" id="reste-valeur">—</div>
+      <div class="reste-label" id="reste-sur">sur une enveloppe non définie</div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%;"></div></div>
+      <div class="progress-meta">
+        <span id="progress-depense">0 €</span>
+        <span id="progress-enveloppe">0 €</span>
+      </div>
+    </div>
+
+    <div class="section-label">Importer un ticket de caisse</div>
+    <div class="card">
+      <div class="photo-import-row">
+        <label class="btn-secondary" for="ticket-photo-input" id="ticket-picker-label">📷 Choisir une photo</label>
+        <input type="file" accept="image/*" id="ticket-photo-input" style="display:none;" onchange="onTicketPhotoSelected()">
+        <button class="btn-primary photo-analyse-btn" id="btn-analyser-ticket" onclick="analyserTicket()" disabled>Analyser</button>
+      </div>
+      <div class="status-line" id="status-ticket"></div>
+
+      <div id="ticket-apercu" style="display:none; margin-top:12px;">
+        <div class="field-row-inline">
+          <div class="field-row">
+            <label class="field-label">Total (€)</label>
+            <input type="number" step="0.01" class="field-input" id="ticket-total">
+          </div>
+          <div class="field-row" style="flex:1.6;">
+            <label class="field-label">Magasin</label>
+            <input type="text" class="field-input" id="ticket-magasin">
+          </div>
+        </div>
+        <div class="field-note" id="ticket-note-composition" style="margin-bottom:10px;"></div>
+        <div class="field-note" id="ticket-alertes" style="margin-bottom:10px; display:none;"></div>
+        <button class="btn-primary" onclick="confirmerDepenseTicket()">Confirmer et enregistrer la dépense</button>
+      </div>
+    </div>
+
+    <div class="section-label">Ajouter une dépense manuellement</div>
+    <div class="card">
+      <div class="field-row-inline">
+        <div class="field-row">
+          <label class="field-label">Montant (€)</label>
+          <input type="number" step="0.01" class="field-input" id="depense-montant" placeholder="0.00">
+        </div>
+        <div class="field-row" style="flex:1.6;">
+          <label class="field-label">Note <span class="section-hint">(optionnel)</span></label>
+          <input type="text" class="field-input" id="depense-note" placeholder="ex. courses semaine">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="ajouterDepense()">Enregistrer la dépense</button>
+      <div class="status-line" id="status-depense"></div>
+    </div>
+
+    <div class="section-label">Enveloppe mensuelle</div>
+    <div class="card">
+      <div class="field-row-inline">
+        <div class="field-row">
+          <label class="field-label">Montant (€)</label>
+          <input type="number" step="1" class="field-input" id="enveloppe-montant" placeholder="ex. 250">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="mettreAJourEnveloppe()">Mettre à jour</button>
+      <div class="status-line" id="status-enveloppe"></div>
+    </div>
+
+    <div class="section-label">Dépenses de ce mois</div>
+    <div class="card" id="liste-depenses">
+      <div class="status-line">Chargement…</div>
+    </div>
+
+    <div class="section-label">Historique <span class="section-hint">(mois passés)</span></div>
+    <div class="card" id="historique-mois">
+      <div class="status-line">Chargement…</div>
+    </div>
+
+    <div id="detail-mois-passe" style="display:none;">
+      <div class="section-label" id="detail-mois-titre">Détail</div>
+      <div class="card" id="detail-mois-contenu"></div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <a href="vue-du-jour.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 3.2 3 11h2v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9h2L12 3.2Z"/></svg></span>Jour</a>
+    <a href="calendrier-unifie.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M7 2v2H5a2 2 0 0 0-2 2v2h18V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7Zm-4 8v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V10H3Zm4 3h3v3H7v-3Z"/></svg></span>Cal.</a>
+    <a href="repas.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 0 1 18 0v1H3v-1Zm-1 3h20l-1.4 5.6A2 2 0 0 1 18.66 21H5.34a2 2 0 0 1-1.94-1.4L2 14Z"/></svg></span>Repas</a>
+    <a href="budget.html" class="nav-item active"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Zm0 2.3 6.5 3.6L12 11.5 5.5 7.9 12 4.3ZM5 9.2l6 3.3v7L5 16.2V9.2Zm8 10.3v-7l6-3.3v7l-6 3.3Z"/></svg></span>Budget</a>
+    <a href="reglages.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><g><rect x="10.7" y="0" width="2.6" height="4.2" rx="1"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(45 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(90 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(135 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(180 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(225 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(270 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(315 12 12)"/></g></svg></span>Réglages</a>
+  </div>
+</div>
+
+<script>
+  let isDay = false;
+  function toggleDayNight(){
+    isDay = !isDay;
+    document.getElementById('phone').classList.toggle('day', isDay);
+  }
+
+  const SUPABASE_URL = "https://osqyczwawbbwjwaubtvc.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXljendhd2Jid2p3YXVidHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5Nzk1MjUsImV4cCI6MjA5NzU1NTUyNX0.Lk2iuL3v_AGuXbyG5yU_-cfvnOtmYoWxiYdyCVKxXzg";
+  const FN_URL = `${SUPABASE_URL}/functions/v1/budget`;
+  const FN_TICKET_URL = `${SUPABASE_URL}/functions/v1/analyser-ticket-caisse`;
+  const AUTH_HEADERS = { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' };
+
+  let ticketPhotoBase64 = null;
+  let ticketPhotoMediaType = null;
+  let ticketDonneesBrutes = null;
+  let ticketDate = null;
+
+  function onTicketPhotoSelected(){
+    const input = document.getElementById('ticket-photo-input');
+    const label = document.getElementById('ticket-picker-label');
+    const btn = document.getElementById('btn-analyser-ticket');
+    const status = document.getElementById('status-ticket');
+    const file = input.files[0];
+    if (!file){ btn.disabled = true; return; }
+
+    label.textContent = '✓ ' + file.name;
+    label.classList.add('has-file');
+    btn.disabled = false;
+    status.className = 'status-line';
+    status.textContent = '';
+
+    ticketPhotoMediaType = file.type || 'image/jpeg';
+    const reader = new FileReader();
+    reader.onload = () => { ticketPhotoBase64 = reader.result.split(',')[1]; };
+    reader.onerror = () => {
+      status.className = 'status-line error';
+      status.textContent = 'Impossible de lire cette image — réessaie';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function analyserTicket(){
+    const status = document.getElementById('status-ticket');
+    const btn = document.getElementById('btn-analyser-ticket');
+    if (!ticketPhotoBase64){
+      status.className = 'status-line error';
+      status.textContent = 'Choisis une photo d\'abord';
+      return;
+    }
+    btn.disabled = true;
+    status.className = 'status-line';
+    status.textContent = 'Analyse en cours…';
+
+    try {
+      const res = await fetch(FN_TICKET_URL, {
+        method: 'POST', headers: AUTH_HEADERS,
+        body: JSON.stringify({ image_base64: ticketPhotoBase64, media_type: ticketPhotoMediaType })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const extrait = data.extrait;
+
+      document.getElementById('ticket-total').value = extrait.total ?? '';
+      document.getElementById('ticket-magasin').value = extrait.magasin ?? '';
+      document.getElementById('ticket-note-composition').textContent = extrait.note_composition ? '💬 ' + extrait.note_composition : '';
+
+      const alertesEl = document.getElementById('ticket-alertes');
+      if (extrait.alertes && extrait.alertes.length > 0){
+        alertesEl.style.display = 'block';
+        alertesEl.textContent = '⚠️ ' + extrait.alertes.join(' · ');
+      } else {
+        alertesEl.style.display = 'none';
+      }
+
+      ticketDonneesBrutes = { articles: extrait.articles || [], alertes: extrait.alertes || [] };
+      ticketDate = /^\d{4}-\d{2}-\d{2}$/.test(extrait.date_ticket) ? extrait.date_ticket : null;
+
+      document.getElementById('ticket-apercu').style.display = 'block';
+      status.className = 'status-line ok';
+      status.textContent = 'Analyse terminée ✓ — vérifie et confirme ci-dessous';
+    } catch (err){
+      status.className = 'status-line error';
+      const msg = String(err);
+      status.textContent = msg.includes('ANTHROPIC_API_KEY')
+        ? 'Import photo pas encore activé — envoie le ticket à Claude en chat, ou saisis la dépense à la main.'
+        : 'Échec de l\'analyse — remplis la dépense manuellement';
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function confirmerDepenseTicket(){
+    const status = document.getElementById('status-ticket');
+    const montant = Number(document.getElementById('ticket-total').value);
+    if (!montant || montant <= 0){
+      status.className = 'status-line error';
+      status.textContent = 'Le total doit être un montant valide';
+      return;
+    }
+    status.className = 'status-line';
+    status.textContent = 'Enregistrement…';
+    try {
+      const payload = {
+        type: 'depense',
+        montant,
+        magasin: document.getElementById('ticket-magasin').value.trim() || undefined,
+        source: 'photo_ia',
+        donnees_brutes: ticketDonneesBrutes,
+      };
+      if (ticketDate) payload.date_depense = ticketDate;
+
+      const res = await fetch(FN_URL, { method: 'POST', headers: AUTH_HEADERS, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderEtat(data);
+      renderDepenses(data.depenses_ce_mois);
+
+      status.className = 'status-line ok';
+      status.textContent = 'Dépense enregistrée depuis le ticket ✓';
+      document.getElementById('ticket-apercu').style.display = 'none';
+      document.getElementById('ticket-picker-label').textContent = '📷 Choisir une photo';
+      document.getElementById('ticket-picker-label').classList.remove('has-file');
+      document.getElementById('btn-analyser-ticket').disabled = true;
+      document.getElementById('ticket-photo-input').value = '';
+      ticketPhotoBase64 = null; ticketDonneesBrutes = null; ticketDate = null;
+    } catch (err){
+      status.className = 'status-line error';
+      status.textContent = 'Échec de l\'enregistrement';
+      console.error(err);
+    }
+  }
+
+  function euros(n){ return Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
+
+  function renderEtat(data){
+    const resteEl = document.getElementById('reste-valeur');
+    const resteSurEl = document.getElementById('reste-sur');
+    const fillEl = document.getElementById('progress-fill');
+    const depEl = document.getElementById('progress-depense');
+    const envEl = document.getElementById('progress-enveloppe');
+
+    if (data.enveloppe_mensuelle == null){
+      resteEl.textContent = euros(data.total_depense_ce_mois);
+      resteSurEl.textContent = 'dépensés — aucune enveloppe définie pour l\'instant';
+      fillEl.style.width = '0%';
+      depEl.textContent = euros(data.total_depense_ce_mois);
+      envEl.textContent = '—';
+      return;
+    }
+
+    const pct = Math.min(100, (data.total_depense_ce_mois / data.enveloppe_mensuelle) * 100);
+    resteEl.textContent = euros(data.reste);
+    resteSurEl.textContent = `sur ${euros(data.enveloppe_mensuelle)} ce mois-ci`;
+    fillEl.style.width = pct + '%';
+    fillEl.classList.toggle('over', data.reste < 0);
+    depEl.textContent = euros(data.total_depense_ce_mois);
+    envEl.textContent = euros(data.enveloppe_mensuelle);
+
+    document.getElementById('enveloppe-montant').placeholder = data.enveloppe_mensuelle;
+  }
+
+  function renderDepenses(depenses){
+    const container = document.getElementById('liste-depenses');
+    container.innerHTML = '';
+    if (!depenses || depenses.length === 0){
+      container.innerHTML = '<div class="status-line">Aucune dépense enregistrée ce mois-ci.</div>';
+      return;
+    }
+    for (const d of depenses){
+      const row = document.createElement('div');
+      row.className = 'depense-row';
+      row.innerHTML = `
+        <div><span class="depense-note">${d.note || 'Dépense'}</span><span class="depense-date">${d.date_depense}</span></div>
+        <span class="depense-montant">${euros(d.montant)}</span>
+      `;
+      container.appendChild(row);
+    }
+  }
+
+  async function chargerBudget(){
+    try {
+      const res = await fetch(FN_URL, { headers: AUTH_HEADERS });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderEtat(data);
+      renderDepenses(data.depenses_ce_mois);
+    } catch (err){
+      console.error('Erreur de chargement budget :', err);
+    }
+  }
+
+  async function ajouterDepense(){
+    const status = document.getElementById('status-depense');
+    const montant = Number(document.getElementById('depense-montant').value);
+    if (!montant || montant <= 0){
+      status.className = 'status-line error';
+      status.textContent = 'Indique un montant valide';
+      return;
+    }
+    status.className = 'status-line';
+    status.textContent = 'Enregistrement…';
+    try {
+      const res = await fetch(FN_URL, {
+        method: 'POST', headers: AUTH_HEADERS,
+        body: JSON.stringify({ type: 'depense', montant, note: document.getElementById('depense-note').value.trim() })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderEtat(data);
+      renderDepenses(data.depenses_ce_mois);
+      status.className = 'status-line ok';
+      status.textContent = 'Dépense enregistrée ✓';
+      document.getElementById('depense-montant').value = '';
+      document.getElementById('depense-note').value = '';
+    } catch (err){
+      status.className = 'status-line error';
+      status.textContent = 'Échec de l\'enregistrement';
+      console.error(err);
+    }
+  }
+
+  async function mettreAJourEnveloppe(){
+    const status = document.getElementById('status-enveloppe');
+    const montant = Number(document.getElementById('enveloppe-montant').value);
+    if (!montant || montant <= 0){
+      status.className = 'status-line error';
+      status.textContent = 'Indique un montant valide';
+      return;
+    }
+    status.className = 'status-line';
+    status.textContent = 'Mise à jour…';
+    try {
+      const res = await fetch(FN_URL, {
+        method: 'POST', headers: AUTH_HEADERS,
+        body: JSON.stringify({ type: 'enveloppe', montant })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderEtat(data);
+      status.className = 'status-line ok';
+      status.textContent = 'Enveloppe mise à jour ✓';
+      document.getElementById('enveloppe-montant').value = '';
+    } catch (err){
+      status.className = 'status-line error';
+      status.textContent = 'Échec de la mise à jour';
+      console.error(err);
+    }
+  }
+
+  const LABELS_MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  function labelMois(moisISO){
+    const [y, m] = moisISO.split('-').map(Number);
+    return `${LABELS_MOIS[m - 1]} ${y}`;
+  }
+
+  async function chargerHistorique(){
+    const container = document.getElementById('historique-mois');
+    try {
+      const res = await fetch(`${FN_URL}?historique=true`, { headers: AUTH_HEADERS });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      const passes = (data.historique || []).filter(h => h.mois !== data.mois_courant);
+      if (passes.length === 0){
+        container.innerHTML = '<div class="status-line">Pas encore de mois passé enregistré.</div>';
+        return;
+      }
+      container.innerHTML = '';
+      for (const h of passes){
+        const row = document.createElement('div');
+        row.className = 'historique-row';
+        row.onclick = () => afficherDetailMois(h.mois);
+        row.innerHTML = `
+          <div><span class="historique-mois-label">${labelMois(h.mois)}</span><span class="historique-mois-nb">${h.nb_depenses} dépense(s)</span></div>
+          <span class="historique-mois-total">${euros(h.total)}</span>
+        `;
+        container.appendChild(row);
+      }
+    } catch (err){
+      console.error('Erreur historique budget :', err);
+      container.innerHTML = '<div class="status-line error">Historique indisponible</div>';
+    }
+  }
+
+  async function afficherDetailMois(mois){
+    const wrapper = document.getElementById('detail-mois-passe');
+    const titre = document.getElementById('detail-mois-titre');
+    const contenu = document.getElementById('detail-mois-contenu');
+
+    titre.textContent = `Détail — ${labelMois(mois)}`;
+    contenu.innerHTML = '<div class="status-line">Chargement…</div>';
+    wrapper.style.display = 'block';
+    wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    try {
+      const res = await fetch(`${FN_URL}?mois=${mois}`, { headers: AUTH_HEADERS });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      contenu.innerHTML = `<div class="reste-label" style="text-align:left; margin-bottom:10px;">Total dépensé : <strong style="color:var(--gold-bright);">${euros(data.total_depense)}</strong></div>`;
+      if (!data.depenses || data.depenses.length === 0){
+        contenu.innerHTML += '<div class="status-line">Aucune dépense ce mois-là.</div>';
+        return;
+      }
+      for (const d of data.depenses){
+        const row = document.createElement('div');
+        row.className = 'depense-row';
+        row.innerHTML = `
+          <div><span class="depense-note">${d.magasin || d.note || 'Dépense'}</span><span class="depense-date">${d.date_depense}</span></div>
+          <span class="depense-montant">${euros(d.montant)}</span>
+        `;
+        contenu.appendChild(row);
+      }
+    } catch (err){
+      contenu.innerHTML = '<div class="status-line error">Détail indisponible</div>';
+      console.error(err);
+    }
+  }
+
+  chargerBudget();
+  chargerHistorique();
+</script>
+
+</body>
+</html>

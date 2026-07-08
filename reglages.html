@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Cadence — Réglages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito+Sans:wght@400;600;700&family=Space+Mono:wght@400;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night-bg:#1c1b30;
+    --night-card:#2B2A4A;
+    --day-bg:#f4f1e9;
+    --day-card:#ffffff;
+    --gold:#D9A441;
+    --gold-bright:#F4C969;
+    --coral:#c94f3a;
+    --text-night:#f4f0e6;
+    --text-day:#12283e;
+    --transition-speed:.6s;
+
+    --sheen: rgba(255,255,255,0.14);
+    --sheen-day: rgba(255,255,255,0.55);
+    --glass-border-night: rgba(255,255,255,0.10);
+    --glass-border-day: rgba(255,255,255,0.65);
+    --shadow-deep-night: 0 14px 30px -8px rgba(0,0,0,0.55), 0 3px 8px rgba(0,0,0,0.35);
+    --shadow-deep-day: 0 14px 28px -10px rgba(20,30,60,0.22), 0 3px 8px rgba(20,30,60,0.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Nunito Sans', sans-serif;
+    background:#0b0b14;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:24px;
+  }
+  .phone{
+    width:390px; height:780px; border-radius:44px; overflow:hidden;
+    position:relative; box-shadow:0 30px 80px rgba(0,0,0,.55);
+    background:var(--night-bg); color:var(--text-night);
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+  }
+  .phone.day{ background:var(--day-bg); color:var(--text-day); }
+  .scroll{ position:absolute; inset:0; overflow-y:auto; padding:20px 18px 100px 18px; }
+
+  .topbar{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; }
+  .wordmark{ font-family:'Quicksand'; font-weight:600; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold-bright); opacity:.85; margin-bottom:2px; }
+  .date-title{ font-family:'Quicksand'; font-weight:700; font-size:21px; }
+  .toggle{
+    background: linear-gradient(160deg, var(--sheen), rgba(255,255,255,0) 55%), rgba(128,128,128,.18);
+    border:1px solid var(--glass-border-night); border-radius:20px; padding:7px 12px;
+    font-family:'Nunito Sans'; font-size:12px; font-weight:700; cursor:pointer; color:inherit;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 4px 10px rgba(0,0,0,.25);
+  }
+  .phone.day .toggle{ border-color: var(--glass-border-day); box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 4px 10px rgba(20,30,60,.12); }
+
+  .section-label{
+    font-family:'Nunito Sans'; font-size:11px; font-weight:700;
+    letter-spacing:.05em; text-transform:uppercase; opacity:.6;
+    margin:22px 0 10px 2px;
+  }
+  .section-label:first-of-type{ margin-top:0; }
+  .section-hint{ font-weight:400; text-transform:none; opacity:.75; }
+
+  .card{
+    background: linear-gradient(160deg, var(--sheen) 0%, rgba(255,255,255,0) 50%), var(--night-card);
+    border:1px solid var(--glass-border-night);
+    border-radius:18px; padding:16px 17px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.10), var(--shadow-deep-night);
+  }
+  .phone.day .card{
+    background: linear-gradient(160deg, var(--sheen-day) 0%, rgba(255,255,255,0) 55%), var(--day-card);
+    border-color: var(--glass-border-day);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.8), var(--shadow-deep-day);
+  }
+
+  .info-row{ display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-bottom:1px solid rgba(128,128,128,.15); }
+  .info-row:last-child{ border-bottom:none; }
+  .info-label{ font-size:12px; opacity:.7; }
+  .info-value{ font-family:'Space Mono', monospace; font-size:12.5px; font-weight:700; color:var(--gold-bright); text-align:right; }
+
+  .locked-pill{
+    display:inline-flex; align-items:center; gap:4px; font-size:9.5px; font-weight:700;
+    padding:2px 8px; border-radius:10px; background:rgba(128,128,128,.18); opacity:.6; margin-left:6px;
+  }
+
+  .btn-primary{
+    width:100%; padding:12px; border:none; border-radius:14px; cursor:pointer;
+    font-family:'Nunito Sans'; font-weight:700; font-size:13.5px; color:#2B2A4A;
+    background: radial-gradient(circle at 32% 20%, #fff, var(--gold-bright) 45%, var(--gold) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 5px 14px rgba(217,164,65,.4);
+    margin-top:6px;
+  }
+  .btn-primary:disabled{ opacity:.5; cursor:default; }
+  .status-line{ font-size:11px; opacity:.6; margin-top:10px; text-align:center; min-height:14px; }
+  .status-line.error{ color:var(--coral); opacity:1; }
+  .status-line.ok{ color:var(--gold-bright); opacity:1; }
+
+  .footer-link{ font-size:11px; opacity:.5; text-align:center; margin-top:24px; text-decoration:underline; cursor:default; }
+
+  .bottom-nav{
+    position:absolute; bottom:0; left:0; width:100%;
+    display:flex; justify-content:space-around; align-items:center;
+    padding:14px 10px 20px 10px;
+    background: linear-gradient(0deg, var(--night-card) 0%, rgba(43,42,74,.92) 100%);
+    border-top:1px solid rgba(255,255,255,.08);
+    box-shadow: 0 -8px 20px rgba(0,0,0,.35);
+    backdrop-filter: blur(12px);
+  }
+  .phone.day .bottom-nav{
+    background: linear-gradient(0deg, var(--day-card) 0%, rgba(255,255,255,.92) 100%);
+    border-top:1px solid rgba(0,0,0,.05);
+    box-shadow: 0 -8px 20px rgba(20,30,60,.08);
+  }
+  .nav-item{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:9.5px; font-family:'Nunito Sans'; font-weight:700; opacity:.45; text-decoration:none; color:inherit; }
+  .nav-item.active{ opacity:1; color:var(--gold-bright); }
+  .nav-icon svg{ width:19px; height:19px; display:block; fill:currentColor; }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+  <div class="scroll">
+    <div class="topbar">
+      <div>
+        <div class="wordmark">Cadence</div>
+        <div class="date-title">Réglages</div>
+      </div>
+      <button class="toggle" onclick="toggleDayNight()">🌙 / ☀️</button>
+    </div>
+
+    <div class="section-label">Cycle actuel</div>
+    <div class="card">
+      <div class="info-row"><span class="info-label">Dernier début de règles</span><span class="info-value" id="cycle-date">—</span></div>
+      <div class="info-row"><span class="info-label">Longueur de cycle estimée</span><span class="info-value" id="cycle-longueur">—</span></div>
+      <div class="info-row"><span class="info-label">Durée des règles estimée</span><span class="info-value" id="cycle-duree">—</span></div>
+      <div class="section-hint" style="margin-top:10px; display:block;">À modifier depuis <a href="saisie-manuelle.html" style="color:var(--gold-bright); font-weight:700;">l'écran Saisie du jour</a>.</div>
+    </div>
+
+    <div class="section-label">Alimentation <span class="locked-pill">🔒 verrouillé</span></div>
+    <div class="card">
+      <div class="info-row"><span class="info-label">Régime</span><span class="info-value">Végétarien</span></div>
+      <div class="info-row"><span class="info-label">Gluten</span><span class="info-value">Sans, de préférence</span></div>
+      <div class="info-row"><span class="info-label">Préparation</span><span class="info-value">Assemblage pur</span></div>
+      <div class="info-row"><span class="info-label">Exclusions fermes</span><span class="info-value" style="text-align:right;">Quinoa, pois chiches,<br>haricots, lentilles</span></div>
+    </div>
+
+    <div class="section-label">Agenda</div>
+    <div class="card">
+      <div class="info-row"><span class="info-label">Outlook</span><span class="info-value" id="sync-outlook">—</span></div>
+      <div class="info-row"><span class="info-label">Gmail</span><span class="info-value" id="sync-gmail">—</span></div>
+      <button class="btn-primary" id="btn-sync" onclick="resynchroniser()">Resynchroniser maintenant</button>
+      <div class="status-line" id="status-sync"></div>
+    </div>
+
+    <div class="section-label">Tes données suivies <span class="section-hint">(pour la corrélation personnelle)</span></div>
+    <div class="card">
+      <div class="info-row"><span class="info-label">Jours d'énergie enregistrés</span><span class="info-value" id="nb-energie">—</span></div>
+      <div class="info-row"><span class="info-label">Jours de sommeil enregistrés</span><span class="info-value" id="nb-sommeil">—</span></div>
+    </div>
+
+    <div class="footer-link">Politique de confidentialité</div>
+  </div>
+
+  <div class="bottom-nav">
+    <a href="vue-du-jour.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 3.2 3 11h2v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9h2L12 3.2Z"/></svg></span>Jour</a>
+    <a href="calendrier-unifie.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M7 2v2H5a2 2 0 0 0-2 2v2h18V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7Zm-4 8v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V10H3Zm4 3h3v3H7v-3Z"/></svg></span>Calendrier</a>
+    <a href="repas.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 0 1 18 0v1H3v-1Zm-1 3h20l-1.4 5.6A2 2 0 0 1 18.66 21H5.34a2 2 0 0 1-1.94-1.4L2 14Z"/></svg></span>Repas</a>
+    <a href="budget.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Zm0 2.3 6.5 3.6L12 11.5 5.5 7.9 12 4.3ZM5 9.2l6 3.3v7L5 16.2V9.2Zm8 10.3v-7l6-3.3v7l-6 3.3Z"/></svg></span>Budget</a>
+    <a href="reglages.html" class="nav-item active"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><g><rect x="10.7" y="0" width="2.6" height="4.2" rx="1"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(45 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(90 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(135 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(180 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(225 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(270 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(315 12 12)"/></g></svg></span>Réglages</a>
+  </div>
+</div>
+
+<script>
+  let isDay = false;
+  function toggleDayNight(){
+    isDay = !isDay;
+    document.getElementById('phone').classList.toggle('day', isDay);
+  }
+
+  const SUPABASE_URL = "https://osqyczwawbbwjwaubtvc.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXljendhd2Jid2p3YXVidHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5Nzk1MjUsImV4cCI6MjA5NzU1NTUyNX0.Lk2iuL3v_AGuXbyG5yU_-cfvnOtmYoWxiYdyCVKxXzg";
+  const AUTH_HEADERS = { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' };
+
+  async function chargerReglages(){
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/checkin`, { headers: AUTH_HEADERS });
+      const data = await res.json();
+      if (data.dernier_cycle){
+        document.getElementById('cycle-date').textContent = data.dernier_cycle.date_debut;
+        document.getElementById('cycle-longueur').textContent = data.dernier_cycle.longueur_cycle_estimee + ' j';
+        document.getElementById('cycle-duree').textContent = data.dernier_cycle.duree_regles_estimee + ' j';
+      } else {
+        document.getElementById('cycle-date').textContent = 'Aucun cycle déclaré';
+      }
+    } catch (err){
+      console.error('Erreur de chargement cycle :', err);
+    }
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/correlations-personnelles`, { headers: AUTH_HEADERS });
+      const data = await res.json();
+      document.getElementById('nb-energie').textContent = (data.nb_jours_energie ?? 0) + ' j';
+      document.getElementById('nb-sommeil').textContent = (data.nb_jours_sommeil ?? 0) + ' j';
+    } catch (err){
+      console.error('Erreur de chargement données :', err);
+    }
+  }
+
+  async function resynchroniser(){
+    const btn = document.getElementById('btn-sync');
+    const status = document.getElementById('status-sync');
+    btn.disabled = true;
+    status.className = 'status-line';
+    status.textContent = 'Synchronisation en cours…';
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/sync-agenda`, { method: 'POST', headers: AUTH_HEADERS });
+      const data = await res.json();
+
+      const outlook = data.summary?.outlook;
+      const gmail = data.summary?.gmail;
+      document.getElementById('sync-outlook').textContent = outlook?.error ? '⚠ erreur' : `${outlook?.count ?? 0} créneaux`;
+      document.getElementById('sync-gmail').textContent = gmail?.error ? '⚠ erreur' : `${gmail?.count ?? 0} créneaux`;
+
+      const erreur = outlook?.error || gmail?.error;
+      if (erreur){
+        status.className = 'status-line error';
+        status.textContent = 'Synchro partielle — ' + erreur;
+      } else {
+        status.className = 'status-line ok';
+        status.textContent = 'Synchronisé ✓';
+      }
+    } catch (err){
+      status.className = 'status-line error';
+      status.textContent = 'Échec de la synchronisation';
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  chargerReglages();
+</script>
+
+</body>
+</html>

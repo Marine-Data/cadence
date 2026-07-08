@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Cadence — Saisie du jour</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito+Sans:wght@400;600;700&family=Space+Mono:wght@400;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night-bg:#1c1b30;
+    --night-card:#2B2A4A;
+    --night-card-2:#332f57;
+    --day-bg:#f4f1e9;
+    --day-card:#ffffff;
+    --day-card-2:#eeeae0;
+    --gold:#D9A441;
+    --gold-bright:#F4C969;
+    --element-accent:#c94f3a; /* Feu, cette semaine */
+    --coral:#c94f3a;
+    --ph-folliculaire:#1690A3;
+    --ph-ovulation:#F4C969;
+    --ph-luteale:#8b7cb5;
+    --text-night:#f4f0e6;
+    --text-night-dim:#c9c6de;
+    --text-day:#12283e;
+    --text-day-dim:#5b6472;
+    --transition-speed:.6s;
+
+    --sheen: rgba(255,255,255,0.14);
+    --sheen-day: rgba(255,255,255,0.55);
+    --glass-border-night: rgba(255,255,255,0.10);
+    --glass-border-day: rgba(255,255,255,0.65);
+    --shadow-deep-night: 0 14px 30px -8px rgba(0,0,0,0.55), 0 3px 8px rgba(0,0,0,0.35);
+    --shadow-deep-day: 0 14px 28px -10px rgba(20,30,60,0.22), 0 3px 8px rgba(20,30,60,0.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Nunito Sans', sans-serif;
+    background:#0b0b14;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:24px;
+  }
+  .phone{
+    width:390px; height:780px; border-radius:44px; overflow:hidden;
+    position:relative; box-shadow:0 30px 80px rgba(0,0,0,.55);
+    background:var(--night-bg); color:var(--text-night);
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+  }
+  .phone.day{ background:var(--day-bg); color:var(--text-day); }
+  .scroll{ position:absolute; inset:0; overflow-y:auto; padding:20px 18px 100px 18px; }
+
+  .topbar{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; }
+  .wordmark{ font-family:'Quicksand'; font-weight:600; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold-bright); opacity:.85; margin-bottom:2px; }
+  .date-title{ font-family:'Quicksand'; font-weight:700; font-size:21px; }
+  .toggle{
+    background: linear-gradient(160deg, var(--sheen), rgba(255,255,255,0) 55%), rgba(128,128,128,.18);
+    border:1px solid var(--glass-border-night); border-radius:20px; padding:7px 12px;
+    font-family:'Nunito Sans'; font-size:12px; font-weight:700; cursor:pointer; color:inherit;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 4px 10px rgba(0,0,0,.25);
+    transition: transform .15s ease;
+  }
+  .toggle:active{ transform: translateY(1px) scale(.97); }
+  .phone.day .toggle{ border-color: var(--glass-border-day); box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 4px 10px rgba(20,30,60,.12); }
+
+  .section-label{
+    font-family:'Nunito Sans'; font-size:11px; font-weight:700;
+    letter-spacing:.05em; text-transform:uppercase; opacity:.6;
+    margin:22px 0 10px 2px;
+  }
+  .section-label:first-of-type{ margin-top:0; }
+  .section-hint{ font-weight:400; text-transform:none; opacity:.75; }
+
+  .card{
+    background: linear-gradient(160deg, var(--sheen) 0%, rgba(255,255,255,0) 50%), var(--night-card);
+    border:1px solid var(--glass-border-night);
+    border-radius:18px; padding:16px 17px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.10), var(--shadow-deep-night);
+    transition: background var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+  }
+  .phone.day .card{
+    background: linear-gradient(160deg, var(--sheen-day) 0%, rgba(255,255,255,0) 55%), var(--day-card);
+    border-color: var(--glass-border-day);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.8), var(--shadow-deep-day);
+  }
+
+  /* ---- Feedback / synthesis card (mirrors ritual-card styling) ---- */
+  .synth-card{ position:relative; overflow:hidden; }
+  .synth-card::before{ content:''; position:absolute; top:0; left:0; width:4px; height:100%; background:var(--element-accent); }
+  .synth-label{ font-family:'Nunito Sans'; font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; opacity:.65; margin-left:6px; }
+  .synth-title{ font-family:'Quicksand'; font-weight:700; font-size:16.5px; margin:5px 0 8px 6px; line-height:1.35; }
+  .synth-meta{ display:flex; justify-content:space-between; align-items:center; margin-left:6px; }
+  .intensity{ display:flex; gap:5px; align-items:center; }
+  .intensity-label{ font-size:10.5px; opacity:.65; margin-right:3px; }
+  .intensity-dot{
+    width:8px; height:8px; border-radius:50%;
+    background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.4), rgba(128,128,128,.25) 70%);
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.2);
+  }
+  .intensity-dot.on{
+    background: radial-gradient(circle at 32% 28%, #fff, var(--gold-bright) 55%, var(--gold) 100%);
+    box-shadow: 0 1px 3px rgba(0,0,0,.35);
+  }
+  .synth-phase{ font-family:'Space Mono', monospace; font-weight:700; font-size:12.5px; color:var(--gold-bright); }
+  .synth-phase-label{ font-size:9.5px; opacity:.6; display:block; text-align:right; font-family:'Nunito Sans'; }
+
+  /* ---- Energy slider ---- */
+  .energy-value-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+  .energy-value{ font-family:'Space Mono', monospace; font-weight:700; font-size:26px; color:var(--gold-bright); }
+  .energy-value-label{ font-size:11px; opacity:.6; }
+  .slider{
+    width:100%; height:8px; border-radius:6px; appearance:none; -webkit-appearance:none;
+    background: linear-gradient(90deg, var(--coral) 0%, var(--gold) 45%, var(--gold-bright) 100%);
+    outline:none; margin:8px 0 16px 0;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,.35);
+  }
+  .slider::-webkit-slider-thumb{
+    appearance:none; -webkit-appearance:none; width:24px; height:24px; border-radius:50%;
+    background: radial-gradient(circle at 32% 28%, #fff, var(--gold-bright) 55%, var(--gold) 100%);
+    box-shadow: 0 3px 8px rgba(0,0,0,.4), inset 0 1px 1px rgba(255,255,255,.6);
+    cursor:pointer; border:2px solid rgba(255,255,255,.5);
+  }
+  .slider::-moz-range-thumb{
+    width:22px; height:22px; border-radius:50%; border:2px solid rgba(255,255,255,.5);
+    background: radial-gradient(circle at 32% 28%, #fff, var(--gold-bright) 55%, var(--gold) 100%);
+    box-shadow: 0 3px 8px rgba(0,0,0,.4);
+    cursor:pointer;
+  }
+
+  .pill-row{ display:flex; gap:8px; margin-bottom:16px; }
+
+  /* ---- Fatigue additionnelle (au-delà du niveau habituel) ---- */
+  .fatigue-toggle-row{
+    display:flex; align-items:center; gap:9px; cursor:pointer;
+    margin-bottom:16px; padding:4px 2px;
+  }
+  .fatigue-checkbox{
+    width:19px; height:19px; border-radius:6px; flex-shrink:0;
+    border:1.5px solid var(--glass-border-night);
+    background: rgba(128,128,128,.14);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,.2);
+    position:relative;
+  }
+  .phone.day .fatigue-checkbox{ border-color: var(--glass-border-day); }
+  .fatigue-checkbox.checked{
+    border-color: var(--gold-bright);
+    background: linear-gradient(160deg, rgba(255,255,255,.3), rgba(255,255,255,0) 60%), rgba(217,164,65,.35);
+  }
+  .fatigue-checkbox.checked::after{
+    content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700; color:var(--gold-bright);
+  }
+  .fatigue-toggle-label{ font-family:'Nunito Sans'; font-size:12.5px; font-weight:600; line-height:1.4; }
+  .pill{
+    flex:1; text-align:center; padding:9px 6px; border-radius:12px;
+    font-family:'Nunito Sans'; font-size:11.5px; font-weight:700; cursor:pointer;
+    background: rgba(128,128,128,.14); border:1.5px solid transparent; color:inherit; opacity:.65;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+    transition: all .18s ease;
+  }
+  .pill.selected{
+    opacity:1; border-color:var(--gold-bright);
+    background: linear-gradient(160deg, rgba(255,255,255,.25), rgba(255,255,255,0) 60%), rgba(217,164,65,.28);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 3px 8px rgba(217,164,65,.25);
+  }
+
+  .btn-primary{
+    width:100%; padding:12px; border:none; border-radius:14px; cursor:pointer;
+    font-family:'Nunito Sans'; font-weight:700; font-size:13.5px; color:#2B2A4A;
+    background: radial-gradient(circle at 32% 20%, #fff, var(--gold-bright) 45%, var(--gold) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 5px 14px rgba(217,164,65,.4);
+    transition: transform .15s ease;
+  }
+  .btn-primary:active{ transform: translateY(1px) scale(.98); }
+  .btn-primary:disabled{ opacity:.5; cursor:default; }
+
+  /* ---- Sleep chips (single tap = save) ---- */
+  .sleep-row{ display:flex; gap:10px; }
+  .sleep-row-3 .sleep-chip{ padding:13px 4px; }
+  .sleep-chip{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding:16px 8px; border-radius:16px; cursor:pointer;
+    background: rgba(128,128,128,.14); border:1.5px solid transparent; color:inherit;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 3px 8px rgba(0,0,0,.2);
+    transition: all .18s ease;
+  }
+  .sleep-chip .emoji{ font-size:24px; }
+  .sleep-chip .label{ font-family:'Nunito Sans'; font-size:12px; font-weight:700; opacity:.75; }
+  .sleep-chip .sleep-hint{ font-family:'Nunito Sans'; font-size:9.5px; opacity:.55; text-align:center; line-height:1.3; }
+  .sleep-chip.selected{
+    border-color:var(--gold-bright);
+    background: linear-gradient(160deg, rgba(255,255,255,.25), rgba(255,255,255,0) 60%), rgba(217,164,65,.22);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 4px 12px rgba(217,164,65,.3);
+  }
+  .sleep-chip.selected .label{ opacity:1; }
+
+  /* ---- Cycle form ---- */
+  .field-row{ margin-bottom:14px; }
+  .field-label{ font-family:'Nunito Sans'; font-size:11.5px; font-weight:700; opacity:.7; margin-bottom:6px; display:block; }
+  .field-input{
+    width:100%; padding:11px 12px; border-radius:12px; border:1.5px solid var(--glass-border-night);
+    background:rgba(128,128,128,.10); color:inherit; font-family:'Nunito Sans'; font-size:13.5px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,.2);
+  }
+  .phone.day .field-input{ border-color: var(--glass-border-day); background:rgba(0,0,0,.03); }
+  .field-input::-webkit-calendar-picker-indicator{ filter:invert(.6); cursor:pointer; }
+  .phone.day .field-input::-webkit-calendar-picker-indicator{ filter:none; }
+  .advanced-toggle{
+    font-family:'Nunito Sans'; font-size:11px; font-weight:700; opacity:.55; cursor:pointer;
+    margin:2px 0 14px 0; display:inline-block;
+  }
+  .advanced-fields{ display:none; gap:10px; }
+  .advanced-fields.open{ display:flex; }
+  .advanced-fields .field-row{ flex:1; }
+  .field-note{ font-size:10.5px; opacity:.55; margin-top:6px; line-height:1.4; }
+
+  /* ---- Sport (compact) ---- */
+  .sport-row{ display:flex; gap:8px; margin-bottom:12px; }
+  .sport-row .field-row{ margin-bottom:0; }
+  .sport-row select.field-input{ appearance:none; -webkit-appearance:none; }
+
+  /* ---- Photo import ---- */
+  .photo-import-row{ display:flex; gap:8px; margin-top:8px; }
+  .btn-secondary{
+    flex:1.3; display:flex; align-items:center; justify-content:center; text-align:center;
+    padding:11px 10px; border-radius:14px; cursor:pointer;
+    font-family:'Nunito Sans'; font-weight:700; font-size:12.5px; color:inherit;
+    background: rgba(128,128,128,.14); border:1.5px solid var(--glass-border-night);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .phone.day .btn-secondary{ border-color: var(--glass-border-day); }
+  .btn-secondary.has-file{ border-color:var(--gold-bright); }
+  .photo-analyse-btn{ flex:1; }
+  .photo-analyse-btn:disabled{ opacity:.4; cursor:default; box-shadow:none; background: rgba(128,128,128,.25); color:inherit; }
+
+  .status-line{ font-size:11px; opacity:.6; margin-top:10px; text-align:center; min-height:14px; }
+  .status-line.error{ color:var(--coral); opacity:1; }
+  .status-line.ok{ color:var(--gold-bright); opacity:1; }
+
+  .bottom-nav{
+    position:absolute; bottom:0; left:0; width:100%;
+    display:flex; justify-content:space-around; align-items:center;
+    padding:14px 10px 20px 10px;
+    background: linear-gradient(0deg, var(--night-card) 0%, rgba(43,42,74,.92) 100%);
+    border-top:1px solid rgba(255,255,255,.08);
+    box-shadow: 0 -8px 20px rgba(0,0,0,.35);
+    backdrop-filter: blur(12px);
+    transition: background var(--transition-speed) ease;
+  }
+  .phone.day .bottom-nav{
+    background: linear-gradient(0deg, var(--day-card) 0%, rgba(255,255,255,.92) 100%);
+    border-top:1px solid rgba(0,0,0,.05);
+    box-shadow: 0 -8px 20px rgba(20,30,60,.08);
+  }
+  .nav-item{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:9.5px; font-family:'Nunito Sans'; font-weight:700; opacity:.45; text-decoration:none; color:inherit; }
+  .nav-item.active{ opacity:1; color:var(--gold-bright); }
+  .nav-icon{ font-size:18px; }
+  .nav-icon svg{ width:19px; height:19px; display:block; fill:currentColor; }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+  <div class="scroll">
+    <div class="topbar">
+      <div>
+        <div class="wordmark">Cadence</div>
+        <div class="date-title">Saisie du jour</div>
+      </div>
+      <button class="toggle" onclick="toggleDayNight()">🌙 / ☀️</button>
+    </div>
+
+    <!-- Synthesized feedback: updates after every save, never shows raw signals alone -->
+    <div class="card synth-card" id="synth-card">
+      <span class="synth-label">Palier recalculé</span>
+      <div class="synth-title" id="synth-title">Chargement…</div>
+      <div class="synth-meta">
+        <div class="intensity">
+          <span class="intensity-label">Palier</span>
+          <span class="intensity-dot" id="dot-1"></span>
+          <span class="intensity-dot" id="dot-2"></span>
+          <span class="intensity-dot" id="dot-3"></span>
+        </div>
+        <div>
+          <span class="synth-phase" id="synth-phase">—</span>
+          <span class="synth-phase-label" id="synth-phase-label"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Énergie ressentie</div>
+    <div class="card">
+      <div class="energy-value-row">
+        <span class="energy-value" id="energy-value">50%</span>
+        <span class="energy-value-label">curseur — pas de chiffre à retenir, juste un ressenti</span>
+      </div>
+      <input type="range" min="0" max="100" value="50" class="slider" id="energy-slider" oninput="onEnergyInput()">
+      <div class="pill-row">
+        <div class="pill" data-moment="matin" onclick="selectMoment('matin')">Matin</div>
+        <div class="pill" data-moment="soir" onclick="selectMoment('soir')">Soir</div>
+        <div class="pill selected" data-moment="ponctuel" onclick="selectMoment('ponctuel')">Maintenant</div>
+      </div>
+      <div class="fatigue-toggle-row" id="fatigue-toggle" onclick="toggleFatigueAdditionnelle()">
+        <span class="fatigue-checkbox" id="fatigue-checkbox"></span>
+        <span class="fatigue-toggle-label">Fatigue en plus aujourd'hui <span class="section-hint">(au-delà de ta fatigue habituelle)</span></span>
+      </div>
+      <button class="btn-primary" id="btn-energie" onclick="saveEnergie()">Enregistrer mon énergie</button>
+      <div class="status-line" id="status-energie"></div>
+    </div>
+
+    <div class="section-label">Sommeil cette nuit <span class="section-hint">(un tap suffit)</span></div>
+    <div class="card">
+      <div class="sleep-row sleep-row-3">
+        <div class="sleep-chip" id="chip-complet" onclick="saveSommeil('complet')">
+          <span class="emoji">😴</span>
+          <span class="label">Nuit complète</span>
+          <span class="sleep-hint">7h à 9h</span>
+        </div>
+        <div class="sleep-chip" id="chip-court" onclick="saveSommeil('court')">
+          <span class="emoji">😐</span>
+          <span class="label">Nuit courte</span>
+          <span class="sleep-hint">5h à 7h</span>
+        </div>
+        <div class="sleep-chip" id="chip-perturbe" onclick="saveSommeil('perturbe')">
+          <span class="emoji">😵‍💫</span>
+          <span class="label">Perturbée</span>
+          <span class="sleep-hint">réveils, insomnie</span>
+        </div>
+      </div>
+      <div class="status-line" id="status-sommeil"></div>
+    </div>
+
+    <div class="section-label">Cycle <span class="section-hint">(une seule saisie par cycle)</span></div>
+    <div class="card">
+      <div class="field-row">
+        <label class="field-label">Date de début des dernières règles</label>
+        <input type="date" class="field-input" id="cycle-date">
+      </div>
+      <span class="advanced-toggle" onclick="toggleAdvanced()">Réglages avancés (durée du cycle, des règles) ▾</span>
+      <div class="advanced-fields" id="advanced-fields">
+        <div class="field-row">
+          <label class="field-label">Longueur cycle (j)</label>
+          <input type="number" class="field-input" id="cycle-longueur" value="28" min="15" max="60">
+        </div>
+        <div class="field-row">
+          <label class="field-label">Durée règles (j)</label>
+          <input type="number" class="field-input" id="cycle-duree-regles" value="5" min="1" max="15">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="saveCycle()">Enregistrer le début du cycle</button>
+      <div class="status-line" id="status-cycle"></div>
+    </div>
+
+    <div class="section-label">Activité sportive <span class="section-hint">(optionnel)</span></div>
+    <div class="card">
+      <label class="field-label">Importer une capture (Strava, Garmin, Apple Santé…)</label>
+      <div class="photo-import-row">
+        <label class="btn-secondary" for="sport-photo-input" id="photo-picker-label">📷 Choisir une photo</label>
+        <input type="file" accept="image/*" id="sport-photo-input" style="display:none;" onchange="onPhotoSelected()">
+        <button class="btn-primary photo-analyse-btn" id="btn-analyser-photo" onclick="analyserPhoto()" disabled>Analyser</button>
+      </div>
+      <div class="status-line" id="status-photo"></div>
+      <div class="field-note" id="photo-preview-note" style="display:none;"></div>
+
+      <span class="advanced-toggle" style="margin-top:14px;" onclick="toggleSportDetails()">Détails de la séance ▾</span>
+      <div class="advanced-fields open" id="sport-details" style="flex-direction:column; gap:12px;">
+        <div class="field-row">
+          <label class="field-label">Titre <span class="section-hint">(optionnel)</span></label>
+          <input type="text" class="field-input" id="sport-titre" placeholder="ex. Course à pied matinale">
+        </div>
+        <div class="sport-row">
+          <div class="field-row" style="flex:1.3;">
+            <label class="field-label">Type</label>
+            <select class="field-input" id="sport-type">
+              <option value="course">Course à pied</option>
+              <option value="musculation">Musculation</option>
+              <option value="yoga">Yoga</option>
+              <option value="marche">Marche</option>
+              <option value="natation">Natation</option>
+              <option value="velo">Vélo</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+          <div class="field-row" style="flex:1;">
+            <label class="field-label">Durée (min)</label>
+            <input type="number" class="field-input" id="sport-duree" value="30" min="1">
+          </div>
+        </div>
+        <div class="sport-row">
+          <div class="field-row">
+            <label class="field-label">Distance (km)</label>
+            <input type="number" step="0.01" class="field-input" id="sport-distance" placeholder="—">
+          </div>
+          <div class="field-row">
+            <label class="field-label">Dénivelé + (m)</label>
+            <input type="number" class="field-input" id="sport-denivele" placeholder="—">
+          </div>
+        </div>
+        <div class="sport-row">
+          <div class="field-row">
+            <label class="field-label">Calories</label>
+            <input type="number" class="field-input" id="sport-calories" placeholder="—">
+          </div>
+          <div class="field-row">
+            <label class="field-label">Allure</label>
+            <input type="text" class="field-input" id="sport-allure" placeholder="ex. 6:58/km">
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary" style="margin-top:6px;" onclick="saveSport()">Enregistrer la séance</button>
+      <div class="status-line" id="status-sport"></div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <a href="vue-du-jour.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 3.2 3 11h2v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9h2L12 3.2Z"/></svg></span>Jour</a>
+    <a href="calendrier-unifie.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M7 2v2H5a2 2 0 0 0-2 2v2h18V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7Zm-4 8v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V10H3Zm4 3h3v3H7v-3Z"/></svg></span>Calendrier</a>
+    <a href="repas.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 0 1 18 0v1H3v-1Zm-1 3h20l-1.4 5.6A2 2 0 0 1 18.66 21H5.34a2 2 0 0 1-1.94-1.4L2 14Z"/></svg></span>Repas</a>
+    <a href="budget.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Zm0 2.3 6.5 3.6L12 11.5 5.5 7.9 12 4.3ZM5 9.2l6 3.3v7L5 16.2V9.2Zm8 10.3v-7l6-3.3v7l-6 3.3Z"/></svg></span>Budget</a>
+    <a href="reglages.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><g><rect x="10.7" y="0" width="2.6" height="4.2" rx="1"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(45 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(90 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(135 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(180 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(225 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(270 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(315 12 12)"/></g></svg></span>Réglages</a>
+  </div>
+</div>
+
+<script>
+  let isDay = false;
+  function toggleDayNight(){
+    isDay = !isDay;
+    document.getElementById('phone').classList.toggle('day', isDay);
+  }
+
+  const SUPABASE_URL = "https://osqyczwawbbwjwaubtvc.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXljendhd2Jid2p3YXVidHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5Nzk1MjUsImV4cCI6MjA5NzU1NTUyNX0.Lk2iuL3v_AGuXbyG5yU_-cfvnOtmYoWxiYdyCVKxXzg";
+  const FN_URL = `${SUPABASE_URL}/functions/v1/checkin`;
+  const FN_PHOTO_URL = `${SUPABASE_URL}/functions/v1/analyser-photo-sport`;
+  const AUTH_HEADERS = { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' };
+
+  const LABEL_PHASE = { regles:'Règles', folliculaire:'Folliculaire', ovulation:'Ovulation', luteale:'Lutéale' };
+
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
+
+  let sportPhotoBase64 = null;
+  let sportPhotoMediaType = null;
+  let sportSource = 'manuel';
+  let sportDonneesBrutes = null;
+  let sportDateActivite = null;
+
+  function toggleSportDetails(){
+    document.getElementById('sport-details').classList.toggle('open');
+  }
+
+  let selectedMoment = 'ponctuel';
+  let fatigueAdditionnelle = false;
+
+  function toggleFatigueAdditionnelle(){
+    fatigueAdditionnelle = !fatigueAdditionnelle;
+    document.getElementById('fatigue-checkbox').classList.toggle('checked', fatigueAdditionnelle);
+  }
+
+  function selectMoment(m){
+    selectedMoment = m;
+    document.querySelectorAll('.pill').forEach(p => p.classList.toggle('selected', p.dataset.moment === m));
+  }
+
+  function onEnergyInput(){
+    document.getElementById('energy-value').textContent = document.getElementById('energy-slider').value + '%';
+  }
+
+  function toggleAdvanced(){
+    document.getElementById('advanced-fields').classList.toggle('open');
+  }
+
+  function renderSynthese(etat){
+    const palierInfo = etat.palier_du_jour;
+    const phaseInfo = etat.phase_cycle;
+    const titleEl = document.getElementById('synth-title');
+    const phaseEl = document.getElementById('synth-phase');
+    const phaseLabelEl = document.getElementById('synth-phase-label');
+
+    if (palierInfo){
+      titleEl.textContent = palierInfo.raison || `Palier ${palierInfo.palier}`;
+      for (let i = 1; i <= 3; i++){
+        document.getElementById(`dot-${i}`).classList.toggle('on', i <= palierInfo.palier);
+      }
+    } else {
+      titleEl.textContent = "Pas encore de palier calculable aujourd'hui";
+      for (let i = 1; i <= 3; i++) document.getElementById(`dot-${i}`).classList.remove('on');
+    }
+
+    if (phaseInfo && phaseInfo.phase){
+      phaseEl.textContent = LABEL_PHASE[phaseInfo.phase] || phaseInfo.phase;
+      phaseLabelEl.textContent = phaseInfo.jour_cycle ? `jour ${phaseInfo.jour_cycle} du cycle` : '';
+    } else {
+      phaseEl.textContent = '—';
+      phaseLabelEl.textContent = 'aucun cycle déclaré';
+    }
+  }
+
+  function appliquerEtatInitial(etat){
+    if (etat.energie_aujourdhui){
+      document.getElementById('energy-slider').value = etat.energie_aujourdhui.valeur_energie;
+      onEnergyInput();
+      selectMoment(etat.energie_aujourdhui.moment || 'ponctuel');
+      if (etat.energie_aujourdhui.fatigue_additionnelle){
+        fatigueAdditionnelle = true;
+        document.getElementById('fatigue-checkbox').classList.add('checked');
+      }
+    }
+    if (etat.sommeil_aujourdhui){
+      const j = etat.sommeil_aujourdhui.jugement;
+      document.getElementById('chip-complet').classList.toggle('selected', j === 'complet');
+      document.getElementById('chip-court').classList.toggle('selected', j === 'court');
+      document.getElementById('chip-perturbe').classList.toggle('selected', j === 'perturbe');
+      document.getElementById('status-sommeil').textContent = 'Déjà renseigné aujourd\'hui — tape à nouveau pour changer.';
+    }
+    if (etat.dernier_cycle){
+      document.getElementById('cycle-date').value = etat.dernier_cycle.date_debut;
+      document.getElementById('cycle-longueur').value = etat.dernier_cycle.longueur_cycle_estimee;
+      document.getElementById('cycle-duree-regles').value = etat.dernier_cycle.duree_regles_estimee;
+    }
+    if (etat.sport_aujourdhui && etat.sport_aujourdhui.length > 0){
+      const labels = etat.sport_aujourdhui.map(s => `${s.titre || s.type_activite} (${s.duree_minutes} min${s.distance_km ? ', ' + s.distance_km + ' km' : ''})`);
+      document.getElementById('status-sport').textContent = 'Déjà enregistré aujourd\'hui : ' + labels.join(' · ');
+    }
+    renderSynthese(etat);
+  }
+
+  async function chargerEtat(){
+    try {
+      const res = await fetch(FN_URL, { headers: AUTH_HEADERS });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      appliquerEtatInitial(data);
+    } catch (err){
+      console.error('Erreur de chargement Cadence :', err);
+      document.getElementById('synth-title').textContent = 'Impossible de charger l\'état du jour — réessaie plus tard';
+    }
+  }
+
+  async function saveEnergie(){
+    const btn = document.getElementById('btn-energie');
+    const status = document.getElementById('status-energie');
+    btn.disabled = true;
+    status.className = 'status-line';
+    status.textContent = 'Enregistrement…';
+    try {
+      const valeur = Number(document.getElementById('energy-slider').value);
+      const res = await fetch(FN_URL, {
+        method: 'POST', headers: AUTH_HEADERS,
+        body: JSON.stringify({ type:'energie', valeur_energie: valeur, moment: selectedMoment, fatigue_additionnelle: fatigueAdditionnelle })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderSynthese(data);
+      status.className = 'status-line ok';
+      status.textContent = 'Énergie enregistrée ✓';
+    } catch (err){
+      status.className = 'status-line error';
+      status.textContent = 'Échec de l\'enregistrement — réessaie';
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function saveSommeil(jugement){
+    const status = document.getElementById('status-sommeil');
+    status.className = 'status-line';
+    status.textContent = 'Enregistrement…';
+    try {
+      const res = await fetch(FN_URL, {
+        method: 'POST', headers: AUTH_HEADERS,
+        body: JSON.stringify({ type:'sommeil', jugement })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      document.getElementById('chip-complet').classList.toggle('selected', jugement === 'complet');
+      document.getElementById('chip-court').classList.toggle('selected', jugement === 'court');
+      document.getElementById('chip-perturbe').classList.toggle('selected', jugement === 'perturbe');
+      renderSynthese(data);
+      status.className = 'status-line ok';
+      status.textContent = 'Sommeil enregistré ✓';
+    } catch (err){
+      status.className = 'status-line error';
+      status.textContent = 'Échec de l\'enregistrement — réessaie';
+      console.error(err);
+    }
+  }
+
+  async function saveCycle(){
+    const status = document.getElementById('status-cycle');
+    const dateDebut = document.getElementById('cycle-date').value;
+    if (!dateDebut){
+      status.className = 'status-line error';
+      status.textContent = 'Choisis une date de début';
+      return;
+    }
+    status.className = 'status-line';
+    status.textContent = 'Enregistrement…';
+    try {
+      const res = await fetch(FN_URL, {
+        method: 'POST', headers: AUTH_HEADERS,
+        body: JSON.stringify({
+          type:'cycle',
+          date_debut: dateDebut,
+          longueur_cycle_estimee: Number(document.getElementById('cycle-longueur').value),
+          duree_regles_estimee: Number(document.getElementById('cycle-duree-regles').value),
+        })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderSynthese(data);
+      status.className = 'status-line ok';
+      status.textContent = 'Cycle enregistré ✓';
+    } catch (err){
+      status.className = 'status-line error';
+      status.textContent = 'Échec de l\'enregistrement — réessaie';
+      console.error(err);
+    }
+  }
+
+  function onPhotoSelected(){
+    const input = document.getElementById('sport-photo-input');
+    const label = document.getElementById('photo-picker-label');
+    const btn = document.getElementById('btn-analyser-photo');
+    const status = document.getElementById('status-photo');
+    const file = input.files[0];
+    if (!file){ btn.disabled = true; return; }
+
+    label.textContent = '✓ ' + file.name;
+    label.classList.add('has-file');
+    btn.disabled = false;
+    status.className = 'status-line';
+    status.textContent = '';
+
+    sportPhotoMediaType = file.type || 'image/jpeg';
+    const reader = new FileReader();
+    reader.onload = () => { sportPhotoBase64 = reader.result.split(',')[1]; };
+    reader.onerror = () => {
+      status.className = 'status-line error';
+      status.textContent = 'Impossible de lire cette image — réessaie';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function analyserPhoto(){
+    const status = document.getElementById('status-photo');
+    const btn = document.getElementById('btn-analyser-photo');
+    if (!sportPhotoBase64){
+      status.className = 'status-line error';
+      status.textContent = 'Choisis une photo d\'abord';
+      return;
+    }
+    btn.disabled = true;
+    status.className = 'status-line';
+    status.textContent = 'Analyse en cours…';
+
+    try {
+      const response = await fetch(FN_PHOTO_URL, {
+        method: "POST",
+        headers: AUTH_HEADERS,
+        body: JSON.stringify({
+          image_base64: sportPhotoBase64,
+          media_type: sportPhotoMediaType,
+          date_du_jour: today,
+        }),
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      const extrait = data.extrait;
+
+      // Préremplit le formulaire, modifiable avant enregistrement
+      if (extrait.titre) document.getElementById('sport-titre').value = extrait.titre;
+      if (extrait.type_activite) document.getElementById('sport-type').value = extrait.type_activite;
+      if (extrait.duree_minutes) document.getElementById('sport-duree').value = extrait.duree_minutes;
+      if (extrait.distance_km != null) document.getElementById('sport-distance').value = extrait.distance_km;
+      if (extrait.denivele_m_positif != null) document.getElementById('sport-denivele').value = extrait.denivele_m_positif;
+      if (extrait.calories != null) document.getElementById('sport-calories').value = extrait.calories;
+      if (extrait.allure) document.getElementById('sport-allure').value = extrait.allure;
+
+      sportSource = 'photo_ia';
+      sportDonneesBrutes = extrait.autres_infos || null;
+      sportDateActivite = /^\d{4}-\d{2}-\d{2}$/.test(extrait.date_activite) ? extrait.date_activite : null;
+
+      document.getElementById('sport-details').classList.add('open');
+      const note = document.getElementById('photo-preview-note');
+      note.style.display = 'block';
+      note.textContent = 'Champs pré-remplis depuis la photo — vérifie et corrige si besoin avant d\'enregistrer.';
+
+      status.className = 'status-line ok';
+      status.textContent = 'Analyse terminée ✓';
+    } catch (err){
+      status.className = 'status-line error';
+      const msg = String(err);
+      if (msg.includes('ANTHROPIC_API_KEY')){
+        status.textContent = 'Import photo pas encore activé — envoie la capture à Claude en chat, ou remplis les champs ci-dessous à la main.';
+      } else {
+        status.textContent = 'Échec de l\'analyse — remplis les champs manuellement';
+      }
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function saveSport(){
+    const status = document.getElementById('status-sport');
+    status.className = 'status-line';
+    status.textContent = 'Enregistrement…';
+    try {
+      const payload = {
+        type: 'sport',
+        type_activite: document.getElementById('sport-type').value,
+        duree_minutes: Number(document.getElementById('sport-duree').value),
+        source: sportSource,
+      };
+      const titre = document.getElementById('sport-titre').value.trim();
+      const distance = document.getElementById('sport-distance').value;
+      const denivele = document.getElementById('sport-denivele').value;
+      const calories = document.getElementById('sport-calories').value;
+      const allure = document.getElementById('sport-allure').value.trim();
+
+      if (titre) payload.titre = titre;
+      if (distance !== '') payload.distance_km = Number(distance);
+      if (denivele !== '') payload.denivele_m_positif = Number(denivele);
+      if (calories !== '') payload.calories = Number(calories);
+      if (allure) payload.allure = allure;
+      if (sportDonneesBrutes) payload.donnees_brutes = sportDonneesBrutes;
+      if (sportDateActivite) payload.date_activite = sportDateActivite;
+
+      const res = await fetch(FN_URL, { method: 'POST', headers: AUTH_HEADERS, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      status.className = 'status-line ok';
+      status.textContent = 'Séance enregistrée ✓';
+
+      // reset état photo pour une prochaine saisie propre
+      sportPhotoBase64 = null; sportSource = 'manuel'; sportDonneesBrutes = null; sportDateActivite = null;
+      document.getElementById('photo-preview-note').style.display = 'none';
+      document.getElementById('photo-picker-label').textContent = '📷 Choisir une photo';
+      document.getElementById('photo-picker-label').classList.remove('has-file');
+      document.getElementById('btn-analyser-photo').disabled = true;
+      document.getElementById('sport-photo-input').value = '';
+    } catch (err){
+      status.className = 'status-line error';
+      status.textContent = 'Échec de l\'enregistrement — réessaie';
+      console.error(err);
+    }
+  }
+
+  chargerEtat();
+</script>
+
+</body>
+</html>

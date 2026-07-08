@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Cadence — Calendrier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito+Sans:wght@400;600;700&family=Space+Mono:wght@400;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night-bg:#1c1b30;
+    --night-card:#2B2A4A;
+    --day-bg:#f4f1e9;
+    --day-card:#ffffff;
+    --gold:#D9A441;
+    --gold-bright:#F4C969;
+    --coral:#c94f3a;
+    --text-night:#f4f0e6;
+    --text-night-dim:#c9c6de;
+    --text-day:#12283e;
+    --text-day-dim:#5b6472;
+    --transition-speed:.6s;
+
+    --bg-regles-plein: var(--coral);
+    --bg-regles-leger: rgba(201,79,58,.20);
+    --ph-folliculaire: #1690A3;
+    --ph-ovulation: #F4C969;
+    --ph-luteale: #8b7cb5;
+    --bg-folliculaire: rgba(22,144,163,.24);
+    --bg-ovulation: rgba(244,201,105,.28);
+    --bg-luteale: rgba(139,124,181,.26);
+    --bg-neutre-night: rgba(255,255,255,.05);
+    --bg-neutre-day: rgba(0,0,0,.035);
+
+    --el-bois:#6b9b4f;
+    --el-feu:#e0654a;
+    --el-terre:#b98d3e;
+    --el-metal:#98a3b0;
+    --el-eau:#3a6ea5;
+
+    /* --- relief / verre --- */
+    --sheen: rgba(255,255,255,0.14);
+    --sheen-day: rgba(255,255,255,0.55);
+    --glass-border-night: rgba(255,255,255,0.10);
+    --glass-border-day: rgba(255,255,255,0.65);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Nunito Sans', sans-serif;
+    background:#0b0b14;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:24px;
+  }
+  .phone{
+    width:390px; height:780px; border-radius:44px; overflow:hidden;
+    position:relative; box-shadow:0 30px 80px rgba(0,0,0,.55);
+    background:var(--night-bg); color:var(--text-night);
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+  }
+  .phone.day{ background:var(--day-bg); color:var(--text-day); }
+  .scroll{ position:absolute; inset:0; overflow-y:auto; padding:20px 18px 100px 18px; }
+
+  .topbar{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; }
+  .wordmark{ font-family:'Quicksand'; font-weight:600; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold-bright); opacity:.85; margin-bottom:2px; }
+  .toggle{
+    background: linear-gradient(160deg, var(--sheen), rgba(255,255,255,0) 55%), rgba(128,128,128,.18);
+    border:1px solid var(--glass-border-night); border-radius:20px; padding:7px 12px;
+    font-family:'Nunito Sans'; font-size:12px; font-weight:700; cursor:pointer; color:inherit;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 4px 10px rgba(0,0,0,.25);
+    transition: transform .15s ease;
+  }
+  .toggle:active{ transform: translateY(1px) scale(.97); }
+  .phone.day .toggle{ border-color: var(--glass-border-day); box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 4px 10px rgba(20,30,60,.12); }
+
+  .month-nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .month-title{ font-family:'Quicksand'; font-weight:700; font-size:19px; text-transform:capitalize; }
+  .nav-btn{
+    background: linear-gradient(160deg, var(--sheen), rgba(255,255,255,0) 55%), rgba(128,128,128,.18);
+    border:1px solid var(--glass-border-night); border-radius:10px; width:32px; height:32px;
+    font-size:15px; font-weight:700; cursor:pointer; color:inherit;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 4px 10px rgba(0,0,0,.25);
+    transition: transform .15s ease;
+  }
+  .nav-btn:active{ transform: translateY(1px) scale(.95); }
+  .phone.day .nav-btn{ border-color: var(--glass-border-day); box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 4px 10px rgba(20,30,60,.12); }
+
+  .weekdays{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:6px; }
+  .weekday{ text-align:center; font-size:10px; font-weight:700; opacity:.5; font-family:'Nunito Sans'; }
+
+  .grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+  .day-cell{
+    aspect-ratio:1; border-radius:11px; position:relative;
+    background: linear-gradient(155deg, var(--sheen) 0%, rgba(255,255,255,0) 55%), var(--bg-neutre-night);
+    border:1px solid var(--glass-border-night);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 3px 8px rgba(0,0,0,.25);
+    padding:4px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    transition: background var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+  }
+  .phone.day .day-cell{
+    background: linear-gradient(155deg, var(--sheen-day) 0%, rgba(255,255,255,0) 60%), var(--bg-neutre-day);
+    border-color: var(--glass-border-day);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 2px 6px rgba(20,30,60,.06);
+  }
+  .day-cell.pad{ background:transparent; border-color:transparent; box-shadow:none; }
+  .day-cell.regles-leger{ background: linear-gradient(155deg, rgba(255,255,255,.16) 0%, rgba(255,255,255,0) 55%), var(--bg-regles-leger); }
+  .day-cell.phase-folliculaire{ background: linear-gradient(155deg, rgba(255,255,255,.20) 0%, rgba(255,255,255,0) 55%), var(--bg-folliculaire); }
+  .day-cell.phase-ovulation{ background: linear-gradient(155deg, rgba(255,255,255,.24) 0%, rgba(255,255,255,0) 55%), var(--bg-ovulation); }
+  .day-cell.phase-luteale{ background: linear-gradient(155deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 55%), var(--bg-luteale); }
+  .day-cell.fin-luteale-marker::before{
+    content:'▾'; position:absolute; bottom:1px; right:4px; font-size:8px;
+    color:var(--ph-luteale); opacity:.9;
+  }
+  .day-cell.jour1{
+    background: linear-gradient(155deg, rgba(255,255,255,.3) 0%, rgba(255,255,255,0) 55%), var(--bg-regles-plein) !important;
+    box-shadow:0 0 0 2px var(--coral), 0 4px 14px rgba(201,79,58,.55), inset 0 1px 0 rgba(255,255,255,.3);
+  }
+  .day-cell.jour1 .day-number{ color:#fff; }
+  .day-cell.jour1::after{
+    content:'●'; position:absolute; top:2px; left:5px; font-size:6px; color:#fff;
+  }
+  .day-cell.aujourdhui{ box-shadow:0 0 0 2px var(--gold-bright), 0 4px 12px rgba(244,201,105,.4); }
+
+  .day-number{ font-family:'Space Mono', monospace; font-size:11.5px; font-weight:700; opacity:.9; }
+  .day-top{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .element-badge{
+    width:13px; height:13px; border-radius:50%; font-size:8px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; color:#fff;
+    font-family:'Nunito Sans';
+    box-shadow: inset 0 -2px 3px rgba(0,0,0,.3), inset 0 1px 1px rgba(255,255,255,.5), 0 1px 3px rgba(0,0,0,.35);
+  }
+  .day-bottom{ display:flex; justify-content:space-between; align-items:flex-end; }
+  .moon-icon{ font-size:9px; opacity:.85; }
+  .agenda-dots{ display:flex; gap:1.5px; }
+  .agenda-dot{ width:3px; height:3px; border-radius:50%; background:currentColor; opacity:.6; }
+
+  .legend{
+    margin-top:20px; padding:14px 15px; border-radius:16px;
+    background: linear-gradient(160deg, var(--sheen) 0%, rgba(255,255,255,0) 50%), var(--night-card);
+    border:1px solid var(--glass-border-night);
+    font-size:11px; line-height:1.7;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 6px 16px rgba(0,0,0,.3);
+    transition: background var(--transition-speed) ease;
+  }
+  .phone.day .legend{
+    background: linear-gradient(160deg, var(--sheen-day) 0%, rgba(255,255,255,0) 55%), var(--day-card);
+    border-color: var(--glass-border-day);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 4px 12px rgba(20,30,60,.06);
+  }
+  .legend-title{ font-family:'Quicksand'; font-weight:700; font-size:12.5px; margin-bottom:10px; }
+  .legend-category{ border-radius:12px; overflow:hidden; margin-bottom:8px; }
+  .legend-category:last-child{ margin-bottom:0; }
+  .legend-cat-header{
+    width:100%; display:flex; align-items:center; gap:8px;
+    background:rgba(128,128,128,.10); border:none; border-radius:12px;
+    padding:9px 11px; cursor:pointer; color:inherit; font-family:'Nunito Sans';
+    text-align:left;
+  }
+  .legend-cat-name{ font-weight:700; font-size:11.5px; flex-shrink:0; }
+  .legend-cat-chips{ display:flex; gap:4px; flex:1; }
+  .legend-chevron{ font-size:10px; opacity:.5; transition: transform .25s ease; flex-shrink:0; }
+  .legend-category.open .legend-chevron{ transform: rotate(180deg); }
+  .legend-cat-body{ max-height:0; overflow:hidden; transition:max-height .3s ease; padding:0 4px; }
+  .legend-category.open .legend-cat-body{ max-height:700px; padding:10px 4px 2px 4px; }
+  .legend-row{ display:flex; align-items:center; gap:7px; margin-bottom:4px; }
+  .legend-desc{ font-size:10px; opacity:.6; margin:-1px 0 3px 19px; line-height:1.4; }
+  .legend-conseil{ font-size:10px; opacity:.8; margin:0 0 10px 19px; line-height:1.4; font-weight:600; }
+  .legend-note{ font-size:9.5px; opacity:.5; margin-top:4px; line-height:1.4; font-style:italic; }
+  .legend-swatch{ width:12px; height:12px; border-radius:4px; flex-shrink:0; box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 1px 2px rgba(0,0,0,.2); }
+  .legend-dot{ width:12px; height:12px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:7px; font-weight:700; color:#fff; box-shadow: inset 0 -1px 2px rgba(0,0,0,.3), inset 0 1px 1px rgba(255,255,255,.4); }
+  .chip-mini{ width:11px; height:11px; border-radius:4px; flex-shrink:0; }
+  .chip-mini.round{ border-radius:50%; }
+
+  .day-detail{
+    margin-top:14px; padding:14px 16px; border-radius:16px;
+    background: linear-gradient(160deg, var(--sheen) 0%, rgba(255,255,255,0) 50%), var(--night-card);
+    border:1px solid var(--glass-border-night);
+    font-size:12.5px; min-height:20px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 6px 16px rgba(0,0,0,.3);
+    transition: background var(--transition-speed) ease;
+  }
+  .phone.day .day-detail{
+    background: linear-gradient(160deg, var(--sheen-day) 0%, rgba(255,255,255,0) 55%), var(--day-card);
+    border-color: var(--glass-border-day);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 4px 12px rgba(20,30,60,.06);
+  }
+  .day-detail-title{ font-family:'Quicksand'; font-weight:700; font-size:14px; margin-bottom:6px; }
+  .day-detail-line{ opacity:.8; margin-bottom:3px; }
+
+  .status-msg{ text-align:center; font-size:12px; opacity:.6; padding:20px 0; }
+
+  .bottom-nav{
+    position:absolute; bottom:0; left:0; width:100%;
+    display:flex; justify-content:space-around; align-items:center;
+    padding:14px 10px 20px 10px;
+    background: linear-gradient(0deg, var(--night-card) 0%, rgba(43,42,74,.92) 100%);
+    border-top:1px solid rgba(255,255,255,.08);
+    box-shadow: 0 -8px 20px rgba(0,0,0,.35);
+    backdrop-filter: blur(12px);
+    transition: background var(--transition-speed) ease;
+  }
+  .phone.day .bottom-nav{
+    background: linear-gradient(0deg, var(--day-card) 0%, rgba(255,255,255,.92) 100%);
+    border-top:1px solid rgba(0,0,0,.05);
+    box-shadow: 0 -8px 20px rgba(20,30,60,.08);
+  }
+  .nav-item{ display:flex; flex-direction:column; align-items:center; gap:3px; font-size:9.5px; font-family:'Nunito Sans'; font-weight:700; opacity:.45; text-decoration:none; color:inherit; }
+  .nav-item.active{ opacity:1; color:var(--gold-bright); }
+  .nav-icon{ font-size:18px; }
+  .nav-icon svg{ width:19px; height:19px; display:block; fill:currentColor; }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+  <div class="scroll">
+    <div class="topbar">
+      <div>
+        <div class="wordmark">Cadence</div>
+      </div>
+      <button class="toggle" onclick="toggleDayNight()">🌙 / ☀️</button>
+    </div>
+
+    <div class="month-nav">
+      <button class="nav-btn" onclick="changerMois(-1)">‹</button>
+      <div class="month-title" id="month-title">—</div>
+      <button class="nav-btn" onclick="changerMois(1)">›</button>
+    </div>
+
+    <div class="weekdays">
+      <div class="weekday">L</div><div class="weekday">M</div><div class="weekday">M</div>
+      <div class="weekday">J</div><div class="weekday">V</div><div class="weekday">S</div><div class="weekday">D</div>
+    </div>
+
+    <div class="grid" id="grid">
+      <div class="status-msg" style="grid-column:1/-1;">Chargement du calendrier…</div>
+    </div>
+
+    <div class="day-detail" id="day-detail" style="display:none;"></div>
+
+    <div class="legend">
+      <div class="legend-title">Légende <span style="opacity:.5; font-weight:400;">(tape une catégorie)</span></div>
+
+      <div class="legend-category" id="cat-cycle">
+        <button class="legend-cat-header" onclick="toggleLegendCat('cat-cycle')">
+          <span class="legend-cat-name">Cycle</span>
+          <span class="legend-cat-chips">
+            <span class="chip-mini" style="background:var(--coral);"></span>
+            <span class="chip-mini" style="background:var(--ph-folliculaire);"></span>
+            <span class="chip-mini" style="background:var(--ph-ovulation);"></span>
+            <span class="chip-mini" style="background:var(--ph-luteale);"></span>
+          </span>
+          <span class="legend-chevron">▾</span>
+        </button>
+        <div class="legend-cat-body">
+          <div class="legend-row"><span class="legend-swatch" style="background:var(--coral);"></span> Règles <span style="opacity:.55;">(● = 1ᵉʳ jour)</span></div>
+          <div class="legend-desc">Chute des hormones : énergie basse, palier 1 systématique.</div>
+          <div class="legend-conseil">💡 Douleurs/fatigue possibles : séances douces (marche, étirements) plutôt que forcer. Le fer aide à compenser les pertes.</div>
+
+          <div class="legend-row"><span class="legend-swatch" style="background:var(--ph-folliculaire);"></span> Phase folliculaire</div>
+          <div class="legend-desc">Les œstrogènes remontent : énergie et humeur en hausse progressive.</div>
+          <div class="legend-conseil">💡 Fenêtre pour l'intensité : besoins en protéines plus élevés (récupération musculaire), glucides complexes pour les réserves de glycogène.</div>
+
+          <div class="legend-row"><span class="legend-swatch" style="background:var(--ph-ovulation);"></span> Ovulation</div>
+          <div class="legend-desc">Pic d'œstrogène (et léger pic de testostérone) : énergie au maximum.</div>
+          <div class="legend-conseil">💡 Pic de performance, mais risque de blessure ligamentaire (genou) légèrement accru dans la littérature sportive — échauffement sérieux avant l'effort intense.</div>
+
+          <div class="legend-row"><span class="legend-swatch" style="background:var(--ph-luteale);"></span> Phase lutéale <span style="opacity:.55;">(▾ = 4 derniers jours)</span></div>
+          <div class="legend-desc">La progestérone domine : énergie stable au début, en baisse les derniers jours avant les règles.</div>
+          <div class="legend-conseil">💡 Fatigue et fringales plus fréquentes (progestérone) : intensité plus modérée, un peu plus de calories si besoin, moins de sel / plus de potassium contre les ballonnements. Sur les 4 derniers jours spécifiquement : calcium + vitamine D (yaourt, fromage, boisson végétale enrichie, œufs) — pistes étudiées contre les symptômes prémenstruels.</div>
+
+          <div class="legend-note">Effets variables selon les personnes, études encore limitées — à ajuster selon ton ressenti. Sans objet si contraception hormonale (cycle hormonal déjà stabilisé).</div>
+        </div>
+      </div>
+
+      <div class="legend-category" id="cat-elements">
+        <button class="legend-cat-header" onclick="toggleLegendCat('cat-elements')">
+          <span class="legend-cat-name">Éléments</span>
+          <span class="legend-cat-chips">
+            <span class="chip-mini round" style="background:var(--el-bois);"></span>
+            <span class="chip-mini round" style="background:var(--el-feu);"></span>
+            <span class="chip-mini round" style="background:var(--el-terre);"></span>
+            <span class="chip-mini round" style="background:var(--el-metal);"></span>
+            <span class="chip-mini round" style="background:var(--el-eau);"></span>
+          </span>
+          <span class="legend-chevron">▾</span>
+        </button>
+        <div class="legend-cat-body">
+          <div class="legend-row"><span class="legend-dot" style="background:var(--el-bois);">B</span> Bois</div>
+          <div class="legend-desc">Foie/Vésicule biliaire, printemps, colère (selon la MTC).</div>
+          <div class="legend-conseil">💡 Étirements matinaux.</div>
+
+          <div class="legend-row"><span class="legend-dot" style="background:var(--el-feu);">F</span> Feu</div>
+          <div class="legend-desc">Cœur/Intestin grêle, été, joie (selon la MTC).</div>
+          <div class="legend-conseil">💡 Un moment de connexion ou de plaisir dans la journée.</div>
+
+          <div class="legend-row"><span class="legend-dot" style="background:var(--el-terre);">T</span> Terre</div>
+          <div class="legend-desc">Rate/Estomac, transitions de saison, rumination (selon la MTC).</div>
+          <div class="legend-conseil">💡 Ancrage, régularité des repas.</div>
+
+          <div class="legend-row"><span class="legend-dot" style="background:var(--el-metal);">M</span> Métal</div>
+          <div class="legend-desc">Poumon/Gros intestin, automne, tristesse (selon la MTC).</div>
+          <div class="legend-conseil">💡 Respiration au grand air + petit tri.</div>
+
+          <div class="legend-row"><span class="legend-dot" style="background:var(--el-eau);">E</span> Eau</div>
+          <div class="legend-desc">Reins/Vessie, hiver, peur (selon la MTC).</div>
+          <div class="legend-conseil">💡 Chaleur sur le bas du dos, micro-sieste.</div>
+
+          <div class="legend-note">Couche de sens issue de la médecine chinoise traditionnelle (Huangdi Neijing), pas un diagnostic.</div>
+        </div>
+      </div>
+
+      <div class="legend-category" id="cat-lune">
+        <button class="legend-cat-header" onclick="toggleLegendCat('cat-lune')">
+          <span class="legend-cat-name">Lune</span>
+          <span class="legend-cat-chips" style="font-size:12px; gap:2px;">🌑🌒🌕🌘</span>
+          <span class="legend-chevron">▾</span>
+        </button>
+        <div class="legend-cat-body">
+          <div class="legend-desc">🌑 Nouvelle — face visible non éclairée, jour 1 du cycle lunaire (~29,53 jours).</div>
+          <div class="legend-conseil">💡 Soleil-Terre-Lune alignés : marée de vive-eau (forte amplitude).</div>
+
+          <div class="legend-desc">🌒 Croissante — portion éclairée croissante, vers la pleine lune.</div>
+          <div class="legend-conseil">💡 Passage par le premier quartier (quadrature) : marée de morte-eau au milieu de cette période.</div>
+
+          <div class="legend-desc">🌕 Pleine — face visible entièrement éclairée.</div>
+          <div class="legend-conseil">💡 Soleil-Terre-Lune de nouveau alignés : marée de vive-eau (forte amplitude).</div>
+
+          <div class="legend-desc">🌘 Décroissante — portion éclairée qui diminue, jusqu'à la nouvelle lune suivante.</div>
+          <div class="legend-conseil">💡 Passage par le dernier quartier (quadrature) : marée de morte-eau au milieu de cette période.</div>
+
+          <div class="legend-note">Effets réels et mesurés sur l'eau (océans, ~30 cm sur la croûte terrestre). Sur un corps humain, la force est des ordres de grandeur plus faible (dépend de la taille du corps, pas de sa teneur en eau) — aucun lien démontré avec l'énergie ou l'humeur.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <a href="vue-du-jour.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 3.2 3 11h2v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9h2L12 3.2Z"/></svg></span>Jour</a>
+    <a href="calendrier-unifie.html" class="nav-item active"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M7 2v2H5a2 2 0 0 0-2 2v2h18V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7Zm-4 8v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V10H3Zm4 3h3v3H7v-3Z"/></svg></span>Calendrier</a>
+    <a href="repas.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 0 1 18 0v1H3v-1Zm-1 3h20l-1.4 5.6A2 2 0 0 1 18.66 21H5.34a2 2 0 0 1-1.94-1.4L2 14Z"/></svg></span>Repas</a>
+    <a href="budget.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Zm0 2.3 6.5 3.6L12 11.5 5.5 7.9 12 4.3ZM5 9.2l6 3.3v7L5 16.2V9.2Zm8 10.3v-7l6-3.3v7l-6 3.3Z"/></svg></span>Budget</a>
+    <a href="reglages.html" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><g><rect x="10.7" y="0" width="2.6" height="4.2" rx="1"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(45 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(90 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(135 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(180 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(225 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(270 12 12)"/><rect x="10.7" y="0" width="2.6" height="4.2" rx="1" transform="rotate(315 12 12)"/></g></svg></span>Réglages</a>
+  </div>
+</div>
+
+<script>
+  let isDay = false;
+  function toggleDayNight(){
+    isDay = !isDay;
+    document.getElementById('phone').classList.toggle('day', isDay);
+  }
+
+  function toggleLegendCat(id){
+    document.getElementById(id).classList.toggle('open');
+  }
+
+  const SUPABASE_URL = "https://osqyczwawbbwjwaubtvc.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXljendhd2Jid2p3YXVidHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5Nzk1MjUsImV4cCI6MjA5NzU1NTUyNX0.Lk2iuL3v_AGuXbyG5yU_-cfvnOtmYoWxiYdyCVKxXzg";
+
+  const MOON_EMOJI = { nouvelle:'🌑', croissante:'🌒', pleine:'🌕', decroissante:'🌘' };
+  const ELEMENT_LETTER = { bois:'B', feu:'F', terre:'T', metal:'M', eau:'E' };
+  const ELEMENT_VAR = { bois:'--el-bois', feu:'--el-feu', terre:'--el-terre', metal:'--el-metal', eau:'--el-eau' };
+
+  let moisAffiche = new Date(); // premier du mois affiché
+  moisAffiche.setDate(1);
+  let joursData = {};
+
+  function formatHeure(iso){
+    return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' });
+  }
+
+  function isoLocal(d){
+    return d.toLocaleDateString('sv-SE');
+  }
+
+  function premierJourSemaine(date){
+    // Lundi = 0 ... Dimanche = 6
+    const jsDay = date.getDay(); // Dimanche=0 ... Samedi=6
+    return (jsDay + 6) % 7;
+  }
+
+  async function chargerMois(){
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '<div class="status-msg" style="grid-column:1/-1;">Chargement du calendrier…</div>';
+
+    const annee = moisAffiche.getFullYear();
+    const mois = moisAffiche.getMonth();
+    const premierJour = new Date(annee, mois, 1);
+    const dernierJour = new Date(annee, mois + 1, 0);
+
+    document.getElementById('month-title').textContent =
+      premierJour.toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
+
+    try {
+      const url = `${SUPABASE_URL}/functions/v1/get-calendrier-unifie?date_debut=${isoLocal(premierJour)}&date_fin=${isoLocal(dernierJour)}`;
+      const res = await fetch(url, { headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      joursData = {};
+      for (const j of data.jours) joursData[j.date] = j;
+
+      dessinerGrille(premierJour, dernierJour);
+    } catch (err) {
+      console.error('Erreur calendrier Cadence :', err);
+      grid.innerHTML = '<div class="status-msg" style="grid-column:1/-1;">Calendrier indisponible pour l\'instant</div>';
+    }
+  }
+
+  function dessinerGrille(premierJour, dernierJour){
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+
+    const decalage = premierJourSemaine(premierJour);
+    for (let i = 0; i < decalage; i++){
+      const pad = document.createElement('div');
+      pad.className = 'day-cell pad';
+      grid.appendChild(pad);
+    }
+
+    const aujourdhui = isoLocal(new Date());
+
+    for (let jour = 1; jour <= dernierJour.getDate(); jour++){
+      const d = new Date(premierJour.getFullYear(), premierJour.getMonth(), jour);
+      const iso = isoLocal(d);
+      const info = joursData[iso];
+
+      const cell = document.createElement('div');
+      cell.className = 'day-cell';
+      if (iso === aujourdhui) cell.classList.add('aujourdhui');
+
+      if (info?.cycle){
+        if (info.cycle.jour1_regles) cell.classList.add('jour1');
+        else if (info.cycle.phase === 'regles') cell.classList.add('regles-leger');
+        else if (info.cycle.phase === 'folliculaire') cell.classList.add('phase-folliculaire');
+        else if (info.cycle.phase === 'ovulation') cell.classList.add('phase-ovulation');
+        else if (info.cycle.phase === 'luteale') cell.classList.add('phase-luteale');
+        if (info.cycle.fin_luteale) cell.classList.add('fin-luteale-marker');
+      }
+
+      const top = document.createElement('div');
+      top.className = 'day-top';
+      const num = document.createElement('span');
+      num.className = 'day-number';
+      num.textContent = jour;
+      top.appendChild(num);
+
+      if (info?.chinois?.element){
+        const badge = document.createElement('span');
+        badge.className = 'element-badge';
+        badge.style.background = `radial-gradient(circle at 32% 26%, rgba(255,255,255,.9), var(${ELEMENT_VAR[info.chinois.element]}) 60%)`;
+        badge.textContent = ELEMENT_LETTER[info.chinois.element];
+        top.appendChild(badge);
+      }
+      cell.appendChild(top);
+
+      const bottom = document.createElement('div');
+      bottom.className = 'day-bottom';
+      const moon = document.createElement('span');
+      moon.className = 'moon-icon';
+      moon.textContent = info?.lune ? (MOON_EMOJI[info.lune.phase] || '') : '';
+      bottom.appendChild(moon);
+
+      const dots = document.createElement('span');
+      dots.className = 'agenda-dots';
+      const n = Math.min(info?.agenda_occupe || 0, 4);
+      for (let i = 0; i < n; i++){
+        const dot = document.createElement('span');
+        dot.className = 'agenda-dot';
+        dots.appendChild(dot);
+      }
+      bottom.appendChild(dots);
+      cell.appendChild(bottom);
+
+      cell.addEventListener('click', () => afficherDetailJour(iso, info));
+      grid.appendChild(cell);
+    }
+  }
+
+  function afficherDetailJour(iso, info){
+    const box = document.getElementById('day-detail');
+    if (!info){ box.style.display = 'none'; return; }
+
+    const dateLisible = new Date(iso).toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+    let lignes = [];
+
+    if (info.cycle){
+      const labelPhase = { regles:'Règles', folliculaire:'Phase folliculaire', ovulation:'Ovulation', luteale:'Phase lutéale' };
+      const descPhase = {
+        regles:'Chute des hormones : énergie basse, palier 1 systématique.',
+        folliculaire:'Les œstrogènes remontent : énergie et humeur en hausse progressive.',
+        ovulation:'Pic d\'œstrogène : énergie au maximum.',
+        luteale:'La progestérone domine : énergie stable, puis en baisse en fin de phase.',
+      };
+      const conseilPhase = {
+        regles:'💡 Douleurs/fatigue possibles : séances douces plutôt que forcer. Le fer aide à compenser les pertes.',
+        folliculaire:'💡 Fenêtre pour l\'intensité : besoins en protéines plus élevés, glucides complexes pour le glycogène.',
+        ovulation:'💡 Pic de performance, mais risque ligamentaire (genou) légèrement accru — échauffement sérieux avant l\'effort intense.',
+        luteale:'💡 Fatigue et fringales plus fréquentes : intensité modérée, moins de sel / plus de potassium contre les ballonnements.',
+      };
+      if (info.cycle.jour1_regles) lignes.push('🩸 1ᵉʳ jour des règles — ' + descPhase.regles);
+      else if (info.cycle.phase === 'regles') lignes.push('Règles — ' + descPhase.regles);
+      else if (info.cycle.phase) lignes.push((labelPhase[info.cycle.phase] || info.cycle.phase) + ' — ' + (descPhase[info.cycle.phase] || ''));
+      if (info.cycle.phase && conseilPhase[info.cycle.phase]) lignes.push(conseilPhase[info.cycle.phase]);
+      if (info.cycle.fin_luteale){
+        lignes.push('4 derniers jours avant les règles — baisse d\'énergie attendue');
+        lignes.push('💡 Calcium + vitamine D (végé) : yaourt, fromage, boisson végétale enrichie, œufs, tofu enrichi en calcium — pistes étudiées pour atténuer les symptômes prémenstruels.');
+      }
+    } else {
+      lignes.push('Cycle non calculable (aucune date de règles déclarée)');
+    }
+
+    if (info.chinois?.terme_du_jour){
+      lignes.push(`Terme solaire : ${info.chinois.terme_du_jour.nom_fr} (${info.chinois.terme_du_jour.nom_cn})`);
+    }
+    if (info.chinois?.description){
+      lignes.push(`${info.chinois.element_label} — ${info.chinois.description}`);
+    }
+    if (info.chinois?.geste){
+      lignes.push(`💡 ${info.chinois.geste}`);
+    }
+    if (info.lune){
+      const labelLune = { nouvelle:'Nouvelle lune', croissante:'Lune croissante', pleine:'Pleine lune', decroissante:'Lune décroissante' };
+      const descLune = {
+        nouvelle:'Face visible non éclairée — jour 1 du cycle lunaire.',
+        croissante:'Portion éclairée croissante, vers la pleine lune.',
+        pleine:'Face visible entièrement éclairée.',
+        decroissante:'Portion éclairée qui diminue, vers la nouvelle lune suivante.',
+      };
+      const mareeLune = {
+        nouvelle:'Marée de vive-eau (Soleil-Terre-Lune alignés).',
+        croissante:'Vers une marée de morte-eau (premier quartier, quadrature).',
+        pleine:'Marée de vive-eau (Soleil-Terre-Lune alignés).',
+        decroissante:'Vers une marée de morte-eau (dernier quartier, quadrature).',
+      };
+      lignes.push(`Lune : ${labelLune[info.lune.phase] || info.lune.phase} — ${descLune[info.lune.phase] || ''}`);
+      lignes.push(`🌊 ${mareeLune[info.lune.phase] || ''}`);
+    }
+    if (info.agenda_occupe > 0){
+      const pluriel = info.agenda_occupe > 1 ? 'créneaux occupés' : 'créneau occupé';
+      lignes.push(`📅 ${info.agenda_occupe} ${pluriel} :`);
+      for (const c of (info.agenda_creneaux || [])){
+        lignes.push(`&nbsp;&nbsp;• ${formatHeure(c.debut)}–${formatHeure(c.fin)} — ${c.titre || 'sans titre'}`);
+      }
+    }
+
+    box.style.display = 'block';
+    box.innerHTML = `<div class="day-detail-title">${dateLisible}</div>` +
+      lignes.map(l => `<div class="day-detail-line">${l}</div>`).join('');
+  }
+
+  function changerMois(delta){
+    moisAffiche.setMonth(moisAffiche.getMonth() + delta);
+    document.getElementById('day-detail').style.display = 'none';
+    chargerMois();
+  }
+
+  chargerMois();
+</script>
+
+</body>
+</html>
