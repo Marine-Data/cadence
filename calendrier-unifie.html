@@ -210,6 +210,7 @@
   }
   .agenda-principal-row:last-child{ border-bottom:none; }
   .agenda-principal-time{ font-family:'Space Mono', monospace; font-weight:700; font-size:12.5px; color:var(--gold-bright); flex-shrink:0; }
+  .agenda-principal-time.toute-journee-badge{ font-family:'Nunito Sans'; font-size:10px; text-transform:uppercase; letter-spacing:.03em; }
   .agenda-principal-titre{ font-family:'Quicksand'; font-weight:600; font-size:14.5px; line-height:1.3; }
   .agenda-vide{ font-size:12.5px; opacity:.6; font-style:italic; padding:6px 0; }
 
@@ -540,10 +541,17 @@
     // ---- Agenda : l'info principale, toujours visible en premier ----
     let agendaHTML = `<div class="agenda-principal"><div class="agenda-principal-label">Aujourd'hui</div>`;
     if (info.agenda_creneaux && info.agenda_creneaux.length > 0){
-      const tries = [...info.agenda_creneaux].sort((a,b) => new Date(a.debut) - new Date(b.debut));
+      // événements "toute la journée" épinglés en premier, comme dans Gmail/Outlook
+      const tries = [...info.agenda_creneaux].sort((a,b) => {
+        if (!!a.toute_la_journee !== !!b.toute_la_journee) return a.toute_la_journee ? -1 : 1;
+        return new Date(a.debut) - new Date(b.debut);
+      });
       for (const c of tries){
+        const timeHTML = c.toute_la_journee
+          ? `<span class="agenda-principal-time toute-journee-badge">Journée</span>`
+          : `<span class="agenda-principal-time">${formatHeure(c.debut)}–${formatHeure(c.fin)}</span>`;
         agendaHTML += `<div class="agenda-principal-row">
-          <span class="agenda-principal-time">${formatHeure(c.debut)}–${formatHeure(c.fin)}</span>
+          ${timeHTML}
           <span class="agenda-principal-titre">${c.titre || 'Sans titre'}</span>
         </div>`;
       }
