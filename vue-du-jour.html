@@ -280,9 +280,9 @@
     </div>
     <a href="saisie-manuelle.html" class="lien-saisie">Faire ma saisie du jour →</a>
 
-    <div class="section-label">Météo <span style="opacity:.5; font-weight:400; text-transform:none;">(pas encore branchée)</span></div>
+    <div class="section-label">Météo</div>
     <div class="card weather-card">
-      <span class="weather-emoji">
+      <span class="weather-emoji" id="weather-emoji">
         <svg viewBox="0 0 64 64" width="36" height="36">
           <defs>
             <radialGradient id="sunGrad" cx="35%" cy="30%" r="70%">
@@ -300,8 +300,8 @@
         </svg>
       </span>
       <div>
-        <div class="weather-temp">22°C</div>
-        <div class="weather-desc">Éclaircies — bonne fenêtre pour sortir vers 12h30</div>
+        <div class="weather-temp" id="weather-temp">—</div>
+        <div class="weather-desc" id="weather-desc">Localisation en cours…</div>
       </div>
     </div>
 
@@ -602,6 +602,86 @@
   chargerVueDuJour();
   chargerCorrelation();
   chargerTaches();
+  chargerMeteo();
+
+  // ---- Météo : géolocalisation navigateur + Edge Function get-meteo ----
+  const FN_METEO_URL = `${SUPABASE_URL}/functions/v1/get-meteo`;
+
+  function iconeMeteoSVG(icone){
+    const defs = `<defs>
+      <radialGradient id="sunGrad2" cx="35%" cy="30%" r="70%">
+        <stop offset="0%" stop-color="#fff9e0"/>
+        <stop offset="55%" stop-color="var(--gold-bright)"/>
+        <stop offset="100%" stop-color="var(--gold)"/>
+      </radialGradient>
+      <linearGradient id="cloudGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#ffffff"/>
+        <stop offset="100%" stop-color="#d8dbe3"/>
+      </linearGradient>
+    </defs>`;
+    const soleil = `<circle cx="32" cy="24" r="15" fill="url(#sunGrad2)"/>`;
+    const nuage = `<path d="M18 46c-6 0-11-5-11-11 0-5.5 4-10 9.4-10.8C18 18 23 14 29 14c6.6 0 12 4.7 13.2 11 4.9.6 8.8 4.8 8.8 9.9 0 5.6-4.5 10.1-10 10.1H18Z" fill="url(#cloudGrad2)"/>`;
+    const pluie = `<g stroke="var(--gold-bright)" stroke-width="2.4" stroke-linecap="round"><line x1="20" y1="50" x2="17" y2="58"/><line x1="30" y1="50" x2="27" y2="58"/><line x1="40" y1="50" x2="37" y2="58"/></g>`;
+    const neige = `<g fill="#cfe3f2"><circle cx="20" cy="52" r="2.2"/><circle cx="30" cy="56" r="2.2"/><circle cx="40" cy="52" r="2.2"/></g>`;
+    const orage = `<path d="M32 46 24 57h6l-3 10 12-14h-6l3-6Z" fill="var(--gold-bright)"/>`;
+    const brouillard = `<g stroke="#b7bfc9" stroke-width="3" stroke-linecap="round"><line x1="10" y1="24" x2="54" y2="24"/><line x1="10" y1="34" x2="54" y2="34"/><line x1="10" y1="44" x2="54" y2="44"/></g>`;
+
+    let corps;
+    switch(icone){
+      case 'soleil': corps = soleil; break;
+      case 'nuage': corps = nuage; break;
+      case 'pluie': corps = nuage + pluie; break;
+      case 'neige': corps = nuage + neige; break;
+      case 'orage': corps = nuage + orage; break;
+      case 'brouillard': corps = brouillard; break;
+      default: corps = soleil + nuage;
+    }
+    return `<svg viewBox="0 0 64 64" width="36" height="36">${defs}${corps}</svg>`;
+  }
+
+  function renderMeteo(data){
+    document.getElementById('weather-emoji').innerHTML = iconeMeteoSVG(data.icone);
+    document.getElementById('weather-temp').textContent = `${data.temperature}°C`;
+    document.getElementById('weather-desc').textContent = `${data.description} — ${data.conseil}`;
+  }
+
+  function renderMeteoIndisponible(message, avecReessai){
+    document.getElementById('weather-temp').textContent = '—';
+    const desc = document.getElementById('weather-desc');
+    desc.innerHTML = avecReessai
+      ? `${message} <a href="#" onclick="chargerMeteo(); return false;" style="color:var(--gold-bright); font-weight:700; text-decoration:none;">Réessayer</a>`
+      : message;
+  }
+
+  async function chargerMeteoAvecPosition(lat, lon){
+    try {
+      const res = await fetch(`${FN_METEO_URL}?lat=${lat}&lon=${lon}`, {
+        headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderMeteo(data);
+    } catch (err){
+      console.error('Erreur de chargement météo :', err);
+      renderMeteoIndisponible('Météo indisponible pour le moment.', true);
+    }
+  }
+
+  function chargerMeteo(){
+    if (!('geolocation' in navigator)){
+      renderMeteoIndisponible('Localisation non disponible sur cet appareil.', false);
+      return;
+    }
+    document.getElementById('weather-desc').textContent = 'Localisation en cours…';
+    navigator.geolocation.getCurrentPosition(
+      (pos) => chargerMeteoAvecPosition(pos.coords.latitude, pos.coords.longitude),
+      (err) => {
+        console.error('Géolocalisation refusée ou indisponible :', err);
+        renderMeteoIndisponible('Active la localisation pour voir la météo.', true);
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 10 * 60 * 1000 }
+    );
+  }
 </script>
 
 </body>
