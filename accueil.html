@@ -146,6 +146,32 @@
   }
   .foam{ stroke:#fff; stroke-width:2; fill:none; opacity:.75; }
 
+  /* ---- Petit bateau annonçant le prochain rendez-vous ---- */
+  .bateau-scene{
+    position:absolute; left:0; bottom:170px; width:100%; height:50px;
+    overflow:visible; z-index:9; pointer-events:none;
+  }
+  .bateau-groupe{
+    position:absolute; left:-160px; bottom:0;
+    display:flex; align-items:flex-end; opacity:0;
+  }
+  .bateau-groupe.navigue{ animation: bateau-traversee 16s linear forwards; }
+  @keyframes bateau-traversee{
+    0%{ left:-160px; opacity:0; }
+    6%{ opacity:1; }
+    94%{ opacity:1; }
+    100%{ left:110%; opacity:0; }
+  }
+  .bateau-banniere{
+    font-family:'Nunito Sans', sans-serif; font-weight:700; font-size:10.5px;
+    background: var(--card-bg-night); color: var(--text-night);
+    padding:5px 11px; border-radius:3px 10px 10px 3px; white-space:nowrap;
+    margin-bottom:14px; margin-right:-4px; backdrop-filter: blur(6px);
+    box-shadow: 0 3px 8px rgba(0,0,0,.3);
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+  }
+  .phone.day .bateau-banniere{ background: var(--card-bg-day); color: var(--text-day); }
+
   /* ---- Top bar ---- */
   .topbar{
     position:absolute; top:0; left:0; width:100%;
@@ -254,6 +280,21 @@
     </svg>
   </div>
 
+  <!-- petit bateau : navigue une fois quand un rendez-vous approche (moins d'1h) -->
+  <div class="bateau-scene">
+    <div class="bateau-groupe" id="bateau-groupe">
+      <span class="bateau-banniere" id="bateau-banniere">RDV</span>
+      <svg width="20" height="14" viewBox="0 0 20 14" style="margin-bottom:16px; flex-shrink:0;">
+        <line x1="0" y1="10" x2="20" y2="3" stroke="var(--gold-bright)" stroke-width="1.5"/>
+      </svg>
+      <svg width="44" height="40" viewBox="0 0 60 54" style="flex-shrink:0;">
+        <path d="M8 38 L52 38 L44 50 L16 50 Z" fill="var(--gold)"/>
+        <line x1="30" y1="38" x2="30" y2="6" stroke="#8a6a3a" stroke-width="2.5"/>
+        <path d="M30 8 L30 34 L10 33 Z" fill="#fdf8ec"/>
+      </svg>
+    </div>
+  </div>
+
   <!-- topbar -->
   <div class="topbar">
     <div>
@@ -321,6 +362,57 @@
     isDay = !isDay;
     document.getElementById('phone').classList.toggle('day', isDay);
   }
+
+  // ---- Petit bateau : navigue une fois quand un rendez-vous approche (< 1h) ----
+  const SUPABASE_URL = "https://osqyczwawbbwjwaubtvc.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXljendhd2Jid2p3YXVidHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5Nzk1MjUsImV4cCI6MjA5NzU1NTUyNX0.Lk2iuL3v_AGuXbyG5yU_-cfvnOtmYoWxiYdyCVKxXzg";
+
+  let dernierRdvDeclenche = null;
+
+  function tronquer(txt, max){
+    if (!txt) return 'Rendez-vous';
+    return txt.length > max ? txt.slice(0, max - 1) + '…' : txt;
+  }
+
+  function lancerBateau(titre){
+    const groupe = document.getElementById('bateau-groupe');
+    const banniere = document.getElementById('bateau-banniere');
+    banniere.textContent = tronquer(titre, 26);
+    groupe.classList.remove('navigue');
+    void groupe.offsetWidth; // force le reflow pour pouvoir relancer l'animation
+    groupe.classList.add('navigue');
+  }
+
+  async function verifierProchainRdv(){
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/get-vue-jour`, {
+        headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      const data = await res.json();
+      if (data.error) return;
+
+      const maintenant = new Date();
+      const prochains = (data.creneaux_occupes || [])
+        .filter(c => !c.toute_la_journee)
+        .map(c => ({ ...c, debutDate: new Date(c.date_debut) }))
+        .filter(c => c.debutDate > maintenant)
+        .sort((a, b) => a.debutDate - b.debutDate);
+
+      if (prochains.length === 0) return;
+      const prochain = prochains[0];
+      const minutesAvant = (prochain.debutDate - maintenant) / 60000;
+
+      if (minutesAvant <= 60 && dernierRdvDeclenche !== prochain.date_debut){
+        dernierRdvDeclenche = prochain.date_debut;
+        lancerBateau(prochain.titre);
+      }
+    } catch (err){
+      console.error('Erreur de vérification agenda (bateau) :', err);
+    }
+  }
+
+  verifierProchainRdv();
+  setInterval(verifierProchainRdv, 5 * 60 * 1000); // revérifie toutes les 5 min
 </script>
 
 </body>

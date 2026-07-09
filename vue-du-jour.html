@@ -107,6 +107,17 @@
     box-shadow: inset 0 1px 0 rgba(255,255,255,.8), var(--shadow-deep-day);
   }
 
+  /* ---- Récap du matin (IA) ---- */
+  .recap-card{ position:relative; overflow:hidden; }
+  .recap-card::before{
+    content:''; position:absolute; top:0; left:0; width:4px; height:100%;
+    background: var(--gold-bright);
+  }
+  .recap-texte{ font-family:'Nunito Sans'; font-size:13.5px; line-height:1.55; margin-left:6px; }
+  .recap-footer{ display:flex; justify-content:space-between; align-items:center; margin:10px 0 0 6px; }
+  .recap-heure{ font-size:10px; opacity:.5; font-family:'Space Mono', monospace; }
+  .recap-regenerer{ font-size:11px; font-weight:700; color:var(--gold-bright); text-decoration:none; font-family:'Nunito Sans'; }
+
   .ritual-card{ position:relative; overflow:hidden; }
   .lien-saisie{
     display:block; text-align:center; font-family:'Nunito Sans'; font-weight:700; font-size:12px;
@@ -260,6 +271,15 @@
     </div>
 
     <div class="element-chip"><span class="element-dot"></span> Semaine du Feu</div>
+
+    <div class="section-label">Ton récap du matin</div>
+    <div class="card recap-card" id="recap-card">
+      <div class="recap-texte" id="recap-texte">Préparation de ton récap…</div>
+      <div class="recap-footer" id="recap-footer" style="display:none;">
+        <span class="recap-heure" id="recap-heure"></span>
+        <a href="#" class="recap-regenerer" id="recap-regenerer" onclick="chargerRecap(true); return false;">Régénérer</a>
+      </div>
+    </div>
 
     <div class="section-label">Ton rituel du jour</div>
     <div class="card ritual-card" id="ritual-card">
@@ -602,7 +622,7 @@
   chargerVueDuJour();
   chargerCorrelation();
   chargerTaches();
-  chargerMeteo();
+  demarrerGeolocalisation();
 
   // ---- Météo : géolocalisation navigateur + Edge Function get-meteo ----
   const FN_METEO_URL = `${SUPABASE_URL}/functions/v1/get-meteo`;
@@ -667,20 +687,62 @@
     }
   }
 
-  function chargerMeteo(){
+  // ---- Géolocalisation partagée : météo + récap du matin en ont besoin, ----
+  // ---- une seule demande de permission au lieu de deux ----
+  let positionActuelle = null;
+
+  function demarrerGeolocalisation(){
     if (!('geolocation' in navigator)){
       renderMeteoIndisponible('Localisation non disponible sur cet appareil.', false);
+      chargerRecap(false);
       return;
     }
     document.getElementById('weather-desc').textContent = 'Localisation en cours…';
     navigator.geolocation.getCurrentPosition(
-      (pos) => chargerMeteoAvecPosition(pos.coords.latitude, pos.coords.longitude),
+      (pos) => {
+        positionActuelle = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        chargerMeteoAvecPosition(positionActuelle.lat, positionActuelle.lon);
+        chargerRecap(false);
+      },
       (err) => {
         console.error('Géolocalisation refusée ou indisponible :', err);
         renderMeteoIndisponible('Active la localisation pour voir la météo.', true);
+        chargerRecap(false);
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 10 * 60 * 1000 }
     );
+  }
+
+  function chargerMeteo(){ demarrerGeolocalisation(); }
+
+  // ---- Récap du matin (IA), mis en cache côté serveur -- un seul appel par jour ----
+  const FN_RECAP_URL = `${SUPABASE_URL}/functions/v1/recap-matin`;
+
+  function renderRecap(data){
+    document.getElementById('recap-texte').textContent = data.texte;
+    const footer = document.getElementById('recap-footer');
+    footer.style.display = 'flex';
+    const heure = new Date(data.genere_le).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' });
+    document.getElementById('recap-heure').textContent = `Généré à ${heure}`;
+  }
+
+  async function chargerRecap(force){
+    document.getElementById('recap-texte').textContent = force ? 'Régénération du récap…' : 'Préparation de ton récap…';
+    document.getElementById('recap-footer').style.display = 'none';
+    try {
+      const params = new URLSearchParams();
+      if (force) params.set('force', 'true');
+      if (positionActuelle){ params.set('lat', positionActuelle.lat); params.set('lon', positionActuelle.lon); }
+      const res = await fetch(`${FN_RECAP_URL}?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderRecap(data);
+    } catch (err){
+      console.error('Erreur de chargement du récap :', err);
+      document.getElementById('recap-texte').textContent = 'Récap indisponible pour le moment.';
+    }
   }
 </script>
 
