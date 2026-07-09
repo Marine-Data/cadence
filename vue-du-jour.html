@@ -265,7 +265,7 @@
     <div class="topbar">
       <div>
         <div class="wordmark">Cadence</div>
-        <div class="date-title">Lundi 6 juillet</div>
+        <div class="date-title" id="date-title">Chargement…</div>
       </div>
       <button class="toggle" onclick="toggleDayNight()">🌙 / ☀️</button>
     </div>
@@ -618,6 +618,16 @@
       renderTaches(data);
     } catch (err){ console.error(err); }
   }
+
+  // ---- Date du jour réelle (remplace le texte statique de la maquette d'origine) ----
+  function afficherDateDuJour(){
+    const maintenant = new Date();
+    const texte = maintenant.toLocaleDateString('fr-FR', {
+      weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Paris'
+    });
+    document.getElementById('date-title').textContent = texte.charAt(0).toUpperCase() + texte.slice(1);
+  }
+  afficherDateDuJour();
 
   chargerVueDuJour();
   chargerCorrelation();
